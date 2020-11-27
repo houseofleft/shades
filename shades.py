@@ -165,7 +165,7 @@ class NoiseGradient(Shade):
     def determine_shade(self, xy):
         color = [0,0,0]
         for i in range(0,3):
-            noise = self.noise_fields[0].noise(xy) - 0.5
+            noise = self.noise_fields[i].noise(xy) - 0.5
             color_affect = noise * (2*self.color_variance)
             color[i] = self.color[i] + color_affect
             color[i] = color_clamp(color[i])

@@ -1,14 +1,65 @@
 from PIL import Image
-
+from abc import ABC, abstractmethod
 import random
+from perlin_noise import PerlinNoise
 
-class Shade:
+def color_clamp(number):
+    return max(min(int(number),255),0)
 
-    def __init__(self, color=(0,0,0), transparency=0):
+class NoiseField:
+    """
+    # An object to return perlin noise from xy coordinates.
+
+
+    Intitialisation Parameters:
+    scale (float): how much noise will vary between coordiantes, for normal effects use 0-1 ranges. Defaults to 0.5
+    seed (int): intitial seed for noise. Defaults to random generation
+    """
+
+    def __init__(self, scale=0.5, seed=None):
+        self.perlin_noise = PerlinNoise(octaves = scale*50, seed = seed)
+
+    def noise(self, xy):
+        """Return the perlin noise of 2d coordinates
+
+        Parameters:
+        xy (iterable of 2 ints): x and y coordinates
+
+        Returns:
+        float: noise from xy coordinates (between 0 and 1)
+
+        """
+
+        return self.perlin_noise((xy[0]/1000,xy[1]/1000))
+
+    def recursive_noise(self, xy, depth=1, feedback=0.5):
+        """Returns domain warped recursive perlin noise (number between 0 and 1) from xy coordinates.
+
+        Parameters:
+        xy (iterable of 2 ints): x and y coordinates
+        depth (int): Number of times recursive call is made. Defaults to 1.
+        feedback (float): Size of warping affect of recursive noise, for normal effects use 0-1 ranges. Defaults to 0.5.
+
+        Returns:
+        float: noise from xy coordinates (between 0 and 1)
+
+        """
+
+        if depth <= 0:
+            return self.noise(xy)
+        else:
+            return self.noise((xy[0]+self.recursive_noise(xy, depth-1, feedback)*feedback*200,xy[1]+self.recursive_noise(xy, depth -1, feedback)*feedback*200))
+
+class Shade(ABC):
+
+    def __init__(self, color=(0,0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
         self.color = color
         self.transparency = transparency
+        self.warp_noise = warp_noise
+        self.warp_size = warp_size
 
-    def determine_shade(self, xy, canvas):
+    @abstractmethod
+    def determine_shade(self, xy):
         '''determines the color for xy coordiantes based on shade.
         arguments:
             xy: xy coordinates in the form of a tuple (x,y)
@@ -25,234 +76,113 @@ class Shade:
         new_color = [int(initial_color[i] + ((color[i] - initial_color[i]) * (1-self.transparency))) for i in range(0,3)]
         return tuple(new_color)
 
-    def mark(self, xy, canvas):
+    def adjust_point(self, xy):
+        '''if warp is applied, appropriately adjusts location of pont
+        arguments:
+            xy: xy coordinates in the form of a tuple (x,y)'''
+        x = xy[0] + (self.warp_noise[0].noise(xy) * self.warp_size)
+        y = xy[1] + (self.warp_noise[1].noise(xy) * self.warp_size)
+        return (x,y)
+
+
+    def point(self, xy, canvas):
         '''determines colour and marks a point on an image.
         takes as arguments:
             xy: xy coordinates in the form of a tuple (x,y)
-            canvas: a PIL image
-            '''
-        color = self.determine_shade(xy, canvas)
+            canvas: a PIL image'''
+        color = self.determine_shade(xy)
         color = self.apply_transparency(xy, canvas, color)
+        if self.warp_size != 0:
+            xy = self.adjust_point(xy)
         canvas.putpixel(xy, color)
 
-
-class Ink:
-
-    def __init__(self, ink_type='block', color=(0,0,0), color_2 = (0,0,0), c_var=50, noise_scale=0.002, noise_seeds=[0,0,0], axis=0, warp_seeds=[0,0], warp_scale=0, warp_size=0, recursion=0, feedback=1, weight=1, transparency=0):
-        # to do: put in assert for ink_types ['block', 'simplex_gradient', 'linear_gradient']
-        self.ink_type = ink_type
-        self.color = color
-        self.color_2 = color_2
-        self.weight = weight
-        self.c_var = c_var
-        self.noise_scale = noise_scale
-        self.noise = [OpenSimplex(n) for n in noise_seeds]
-        self.axis = axis
-        self.warp_noise = [OpenSimplex(w) for w in warp_seeds]
-        self.warp_scale = warp_scale
-        self.warp_size = warp_size
-        self.recursion = recursion
-        self.feedback = feedback
-        self.transparency = transparency
-
-    def decide_color(self, xy, canvas):
-        '''determines the color for xy coordinates based on ink type.
+    def fill(self, canvas):
+        '''fills the entire image with color.
         takes as arguments:
-            xy: xy coordinates in the form of a tuple (x,y)'''
-        if self.ink_type == 'block':
-            return self.color
-        elif self.ink_type == 'simplex_gradient':
-            color = [0,0,0]
-            for i in range(0,3):
-                affected_color = mapped_noise(self.noise[i], (xy[0]*self.noise_scale,xy[1]*self.noise_scale), self.color[i] - self.c_var, self.color[i] + self.c_var, self.recursion, self.feedback)
-                color[i] = max(min(int(affected_color),255),0)
-            return tuple(color)
-        elif self.ink_type == 'linear_gradient':
-            through = xy[self.axis] / [canvas.width, canvas.height][self.axis]
-            color = [0,0,0]
-            for i in range(0,3):
-                color[i] = int(self.color[i] + ((self.color_2[i] - self.color[i]) * through))
-                color[i] = max(min(int(color[i]),255),0)
-            return tuple(color)
+            canvas: a PIL image'''
+        # we'll temporarily turn off warping as it isn't needed here
+        warp_size_keeper = self.warp_size
+        self.warp_size = 0
+        for x in range(0,canvas.width):
+            for y in range(0,canvas.height):
+                self.point((x,y), canvas)
+        self.warp_size = warp_size_keeper
 
-    def apply_transparency(self, xy, color, canvas):
-        initial_color = canvas.img.getpixel((int(xy[0]),int(xy[1])))
-        new_color = [0,0,0]
+    def rectangle(self, canvas, xy, width, height):
+        for x in range(int(xy[0]), int(xy[0] + width)):
+            for y in range(int(xy[1]), int(xy[1] + height)):
+                self.point((x,y), canvas)
+
+    def circle(self, canvas, xy, radius):
+        for h in range(0, int(radius)):
+            circumfurence = radius * 2 * math.pi
+            for c in [x for x in range(0, (int(circumfurence)+1))]:
+                angle = (c/circumfurence) * 360
+                opposite = math.sin(math.radians(angle)) * h
+                adjacent = math.cos(math.radians(angle)) * h
+                self.point((xy[0] + adjacent, xy[1] + opposite), canvas)
+
+    def line(self, canvas, xy1, xy2):
+        # first figuring out which is biggest distance, that step will be one
+        # this is so that line is iterated through in distances of one pixel
+        if abs(xy1[0] - xy2[0]) > abs(xy[1] - xy2[1]):
+            if xy1[0] > xy2[0]:
+                x_step = -1
+            else:
+                x_step = 1
+            y_step = ( abs(xy1[1] - xy2[1]) / abs(xy1[0] - xy2[0]) )
+            if xy1[1] > xy2[1]:
+                y_step *= -1
+            istop = abs(xy1[0] - xy2[0])
+        else:
+            if xy1[1] > xy2[1]:
+                y_step = -1
+            else:
+                y_step = 1
+            x_step = (abs(xy1[0]-xy2[0])/abs(xy1[1]-xy2[1]))
+            if xy1[0] > xy2[0]:
+                x_step *= 1
+            istop = abs(xy1[1]-xy2[1])
+        x = xy1[0]
+        y = xy1[1]
+        for i in range(0, int(istop)):
+            self.point((x,y), canvas)
+            x += x_step
+            y += y_step
+
+class BlockColor(Shade):
+
+    def determine_shade(self, xy):
+        return self.color
+
+class NoiseGradient(Shade):
+
+    def __init__(self, color=(0,0,0), transparency=0, warp_noise=NoiseField(), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)]):
+        super().__init__(color, transparency, warp_noise, warp_size)
+        self.color_variance = color_variance
+        self.noise_fields = tuple(noise_fields)
+
+    def determine_shade(self, xy):
+        color = [0,0,0]
         for i in range(0,3):
-            new_color[i] = initial_color[i] + ((color[i] - initial_color[i]) * (1-self.transparency))
-            new_color[i] = int(new_color[i])
-        return tuple(new_color)
+            noise = self.noise_fields[0].noise(xy) - 0.5
+            color_affect = noise * (2*self.color_variance)
+            color[i] = self.color[i] + color_affect
+            color[i] = color_clamp(color[i])
+        return tuple(color)
 
-    def adjust_point(self, xy):
-        if self.warp_scale == 0 or self.warp_size == 0:
-            return xy
-        else:
-            x = mapped_noise(self.warp_noise[0], (xy[0]*self.warp_scale,xy[1]*self.noise_scale), xy[0]-self.warp_size, xy[0]+self.warp_size)
-            y = mapped_noise(self.warp_noise[1], (xy[0]*self.warp_scale,xy[1]*self.noise_scale), xy[1]-self.warp_size, xy[1]+self.warp_size)
-            return ((x,y))
+class DomainWarpingGradient(Shade):
 
+    def __init__(self, color=(0,0,0), transparency=0, warp_noise=NoiseField(), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)], depth=1, feedback=0.5):
+        super().__init__(color, transparency, warp_noise, warp_size)
+        self.noise_fields = tuple(noise_fields)
 
-    def point(self, canvas, xy):
-        '''makes a point on a Canvas object.
-        takes as arguments:
-            canvas: a sketcher.Canvas object
-            xy: xy coordinates in the form of a tuple (x,y)'''
-        color = self.decide_color(xy, canvas)
-        xy = self.adjust_point(xy)
-        for x in range(int(xy[0]),int(xy[0]+self.weight)):
-            for y in range(int(xy[1]),int(xy[1]+self.weight)):
-                if canvas.point_in_canvas((x,y)):
-                    if self.transparency != 0:
-                        color = self.apply_transparency((x,y), color, canvas)
-                    canvas.img.putpixel((int(x),int(y)),color)
+    def determine_shade(self, xy):
+        color = [0,0,0]
+        for i in range(0,3):
+            noise = self.noise_fields[0].recursive_noise(xy, depth, feedback) - 0.5
+            color_affect = noise * (2*color_variance)
+            color[i] = self.color[i] + color_affect
+            color[i] = color_clamp(color[i])
+        return tuple(color)
 
-
-class Canvas:
-
-  def __init__(self, width, height):
-    self.height = height
-    self.width = width
-    self.img = Image.new('RGB', (self.width, self.height), color=(255,255,255))
-
-  def fill(self, ink=Ink()):
-    for x in range(0, int(self.width)):
-      for y in range(0, int(self.height)):
-        ink.point(self, (x,y))
-
-  def rect(self, xy, width, height, ink=Ink()):
-    for x in range(int(xy[0]), int(xy[0] + width)):
-      for y in range(int(xy[1]), int(xy[1] + height)):
-        if self.point_in_canvas((x,y)):
-          ink.point(self, (x,y))
-
-  def circle(self, x_y, radius, start_radius=0, ink=Ink()):
-    for h in range(int(start_radius), int(radius)):
-      circumference = radius * 2 * math.pi
-      for c in [x for x in range(0, (int(circumference)+1))]:
-        angle = (c/circumference) * 360
-        opposite = math.sin(math.radians(angle)) * h
-        adjacent = math.cos(math.radians(angle)) * h
-        ink.point(self, (x_y[0] + adjacent, x_y[1] + opposite))
-
-  def line(self, xy1, xy2, ink=Ink()):
-  # start by moving from 1 to 2
-    # first figuring out which is biggest distance, that step will be one, so every pixel gets covered
-    if abs(xy1[0] - xy2[0]) > abs(xy1[1] - xy2[1]):
-      if xy1[0] > xy2[0]:
-        x_step = -1
-      else:
-        x_step = 1
-      if xy1[1] > xy2[1]:
-        y_step = -1 * (abs(xy1[1]-xy2[1])/abs(xy1[0]-xy2[0]))
-      else:
-        y_step = abs(xy1[1]-xy2[1])/abs(xy1[0]-xy2[0])
-      istop = abs(xy1[0] - xy2[0])
-    else:
-      if xy1[1] > xy2[1]:
-        y_step = -1
-      else:
-        y_step = 1
-      if xy1[0] > xy2[0]:
-        x_step = -1 * (abs(xy1[0]-xy2[0])/abs(xy1[1]-xy2[1]))
-      else:
-        x_step = (abs(xy1[0]-xy2[0])/abs(xy1[1]-xy2[1]))
-      istop = abs(xy1[1]-xy2[1])
-    x = xy1[0]
-    y = xy1[1]
-    for i in range(0,int(istop)):
-        ink.point(self, (x,y))
-        x += x_step
-        y += y_step
-
-  def triangle(self, xy1, xy2, xy3, ink=Ink()):
-    # start by moving from 1 to 2
-    # first figuring out which is biggest distance, that step will be one, so every pixel gets covered
-    if abs(xy1[0] - xy2[0]) > abs(xy1[1] - xy2[1]):
-      if xy1[0] > xy2[0]:
-        x_step = -1
-      else:
-        x_step = 1
-      if xy1[1] > xy2[1]:
-        y_step = -1 * (abs(xy1[1]-xy2[1])/abs(xy1[0]-xy2[0]))
-      else:
-        y_step = abs(xy1[1]-xy2[1])/abs(xy1[0]-xy2[0])
-      istop = abs(xy1[0] - xy2[0])
-    else:
-      if xy1[1] > xy2[1]:
-        y_step = -1
-      else:
-        y_step = 1
-      if xy1[0] > xy2[0]:
-        x_step = -1 * (abs(xy1[0]-xy2[0])/abs(xy1[1]-xy2[1]))
-      else:
-        x_step = (abs(xy1[0]-xy2[0])/abs(xy1[1]-xy2[1]))
-      istop = abs(xy1[1]-xy2[1])
-    # now we have our steps, we can draw a straight line between the two
-    x = xy1[0]
-    y = xy1[1]
-    for i in range(0,int(istop)):
-      # this is running across the line between xy1 and xy2
-      # at each opint, we need to draw another line, between point xy and xy3
-      if abs(x-xy3[0]) > abs(y-xy3[1]):
-        if x > xy3[0]:
-          x_step_2 = -1
-        else:
-          x_step_2 = 1
-        if y > xy3[1]:
-          y_step_2 = -1 * (abs(y-xy3[1])/abs(x-xy3[0]))
-        else:
-          y_step_2 = (abs(y-xy3[1])/abs(x-xy3[0]))
-        istop2 = abs(x-xy3[0])
-      else:
-        if y > xy3[1]:
-          y_step_2 = -1
-        else:
-          y_step_2 = 1
-        if x > xy3[0]:
-          x_step_2 = -1 * (abs(x-xy3[0])/abs(y-xy3[1]))
-        else:
-          x_step_2 = (abs(x-xy3[0])/abs(y-xy3[1]))
-        istop2 = abs(y-xy3[1])
-
-      x2 = x
-      y2 = y
-
-      for j in range(0,int(istop2)):
-        self.rect((x2,y2),2,2,ink)
-        x2 += x_step_2
-        y2 += y_step_2
-
-      x += x_step
-      y += y_step
-
-  def point_in_canvas(self, xy):
-    return (xy[0] < self.width and xy[0] >= 0 and xy[1] < self.height and xy[1] >= 0)
-
-  def point(self, canvas, xy):
-    canvas.img.putpixel((int(xy[0]),int(xy[1])), self.img.getpixel((int(xy[0]), int(xy[1]))))
-
-  def show(self):
-    self.img.show()
-
-  def save(self, file_name):
-    self.img.save(file_name)
-
-def shuffle_image(img, horizontal_pieces=5, vertical_pieces=5):
-    copy = img
-    x_coordinates = [x for x in range(0, img.width, int(img.width/horizontal_pieces))]
-    y_coordinates = [y for y in range(0, img.height, int(img.height/vertical_pieces))]
-    coordinates = [i for i in itertools.product(x_coordinates, y_coordinates)]
-    shuffled_coordinates = coordinates.copy()
-    random.shuffle(shuffled_coordinates)
-    coordinate_pairs = [i for i in zip(coordinates, shuffled_coordinates)]
-    for pair in coordinate_pairs:
-        first = pair[0]
-        second = pair[1]
-        for x in range(0, int(img.width/horizontal_pieces)):
-            for y in range(0, int(img.height/vertical_pieces)):
-                try:
-                    color = copy.getpixel((second[0]+x,second[1]+y))
-                    img.putpixel((first[0]+x,first[1]+y),color)
-                except:
-                    pass
-    return img

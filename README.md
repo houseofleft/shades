@@ -52,3 +52,4 @@ for y in range(-50, canvas.height+50, 10):
 canvas.show()
 canvas.save('picture.png')
 ```
+

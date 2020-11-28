@@ -1,8 +1,10 @@
 import shades
 from PIL import Image
+import random
 
-canvas = Image.new('RGB', (200,200))
-shade = shades.NoiseGradient(color=(200,200,200))
+canvas = shades.Canvas(50, 50)
+shade = shades.DomainWarpingGradient(color=(200,200,250))
+
 shade.fill(canvas)
 
 canvas.show()

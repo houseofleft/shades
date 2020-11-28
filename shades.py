@@ -1,7 +1,7 @@
 from PIL import Image
 from abc import ABC, abstractmethod
 import random
-from perlin_noise import PerlinNoise
+from opensimplex import OpenSimplex
 from math import pi, sin, cos, radians
 
 def color_clamp(color):
@@ -32,12 +32,16 @@ class NoiseField:
     seed (int): intitial seed for noise. Defaults to random generation
     """
 
-    def __init__(self, scale=0.2, seed=None):
-        self.perlin_noise = PerlinNoise(octaves = scale*50, seed = seed)
+    def __init__(self, scale=0.02, seed=None):
+        if seed == None:
+            self.simplex = OpenSimplex(random.randint(0,999999))
+        else:
+            self.simplex = OpenSimplex(int(seed))
+        self.scale = scale
 
     def noise(self, xy):
         """
-        Return the perlin noise of 2d coordinates
+        Return the simplex noise of 2d coordinates
 
         Parameters:
         xy (iterable of 2 ints): x and y coordinates
@@ -45,11 +49,11 @@ class NoiseField:
         Returns:
         float: noise from xy coordinates (between 0 and 1)
         """
+        return (self.simplex.noise2d(xy[0]*self.scale,xy[1]*self.scale)+1)/2
 
-        return self.perlin_noise((xy[0]/1000,xy[1]/1000))
 
     def recursive_noise(self, xy, depth=1, feedback=0.7):
-        """Returns domain warped recursive perlin noise (number between 0 and 1) from xy coordinates.
+        """Returns domain warped recursive simplex noise (number between 0 and 1) from xy coordinates.
 
         Parameters:
         xy (iterable of 2 ints): x and y coordinates
@@ -65,8 +69,8 @@ class NoiseField:
         else:
             return self.noise(
                 (
-                    ((xy[0]+self.recursive_noise(xy, depth-1, feedback) / 1000) * (feedback*200)),
-                    ((xy[1]+self.recursive_noise(xy, depth -1, feedback) / 1000) * (feedback*200))
+                    (xy[0] * self.scale + self.recursive_noise(xy, depth - 1, feedback) * (feedback*300)),
+                    (xy[1] * self.scale + self.recursive_noise(xy, depth - 1, feedback) * (feedback*300))
                 )
             )
 
@@ -184,7 +188,7 @@ class Shade(ABC):
             i_stop = abs(xy1[1]-xy2[1])
         return x_step, y_step, int(i_stop)
 
-    def line(self, canvas, xy1, xy2, weight):
+    def line(self, canvas, xy1, xy2, weight=2):
         """
         Draws a weighted line on the image.
 
@@ -245,13 +249,13 @@ class Shade(ABC):
 
         (no returns)
         """
-        for h in range(0, int(radius)):
+        for h in range(0, int(radius),2):
             circumfurence = radius * 2 * pi
             for c in [x for x in range(0, (int(circumfurence)+1))]:
                 angle = (c/circumfurence) * 360
                 opposite = sin(radians(angle)) * h
                 adjacent = cos(radians(angle)) * h
-                self.point(canvas, (xy[0] + adjacent, xy[1] + opposite))
+                self.rectangle(canvas, (xy[0] + adjacent, xy[1] + opposite), 3, 3)
 
     def triangle(self, canvas, xy1, xy2, xy3):
         """
@@ -270,7 +274,7 @@ class Shade(ABC):
         x = xy1[0]
         y = xy1[1]
         for i in range(0, i_stop):
-            self.line(canvas, (x,y), xy3)
+            self.line(canvas, (x,y), xy3, 3)
             x += x_step
             y += y_step
 
@@ -285,7 +289,6 @@ class BlockColor(Shade):
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
-
     def determine_shade(self, xy):
         """
         Ignores xy coordinates and returns defined color.
@@ -299,22 +302,54 @@ class BlockColor(Shade):
         return self.color
 
 class NoiseGradient(Shade):
+    """
+    Type of shade that will produce varying gradient based on noise fields.
 
-    def __init__(self, color=(0,0,0), transparency=0, warp_noise=NoiseField(), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)]):
+    Initialisation Parameters:
+    color (tuple): central RGB color of shade. Defaults to black.
+    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible. Defaults to 0.
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made. Defaults to initalisation of NoiseField().
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels. Defaults to 0.
+    color_variance (int): How much noise is allowed to affect the color from the central shade
+    noise_fields (iterable of NoiseFields): A noise field for each channel (r,g,b). Defaults to three initialisations of NoiseField().
+    """
+    def __init__(self, color=(0,0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)]):
         super().__init__(color, transparency, warp_noise, warp_size)
         self.color_variance = color_variance
         self.noise_fields = tuple(noise_fields)
 
     def determine_shade(self, xy):
+        """
+        Measures noise from coordinates and affects color based upon return.
+
+        Parameters:
+        xy (iterable): xy coordinates
+
+        Returns:
+        color in form of tuple
+        """
         def apply_noise(i):
             noise = self.noise_fields[i].noise(xy) - 0.5
             color_affect = noise * (2*self.color_variance)
             return self.color[i] + color_affect
         return color_clamp([apply_noise(i) for i in range(0,3)])
 
-class DomainWarpingGradient(Shade):
+class DomainWarpGradient(Shade):
+    """
+    Type of shade that will produce varying gradient based on recursive noise fields.
+    Because of the exponential nature of recursive calls, this shade can lead to long run times.
 
-    def __init__(self, color=(0,0,0), transparency=0, warp_noise=NoiseField(), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)], depth=1, feedback=0.7):
+    Initialisation Parameters:
+    color (tuple): central RGB color of shade. Defaults to black.
+    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible. Defaults to 0.
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made. Defaults to initalisation of NoiseField().
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels. Defaults to 0.
+    color_variance (int): How much noise is allowed to affect the color from the central shade
+    noise_fields (iterable of NoiseFields): A noise field for each channel (r,g,b). Defaults to three initialisations of NoiseField().
+    depth (int): Number of recursive calls of noise to make. Defaults to 1.
+    feedback (float): The size of effect of recursive noise calls. For normal affects set within 0-1 range. Defaults to 0.7.
+    """
+    def __init__(self, color=(0,0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)], depth=1, feedback=0.7):
         super().__init__(color, transparency, warp_noise, warp_size)
         self.color_variance = color_variance
         self.noise_fields = tuple(noise_fields)
@@ -322,9 +357,56 @@ class DomainWarpingGradient(Shade):
         self.feedback = feedback
 
     def determine_shade(self, xy):
+        """
+        Determines shade based on xy coordinates.
+
+        Parameters:
+        xy (iterable): xy coordinates
+
+        Returns:
+        color in form of tuple
+        """
         def apply_noise(i):
             noise = self.noise_fields[i].recursive_noise(xy, self.depth, self.feedback) - 0.5
             color_affect = noise * (2*self.color_variance)
             return self.color[i] + color_affect
         return color_clamp([apply_noise(i) for i in range(0,3)])
 
+class SwirlOfShades(Shade):
+    """
+    Type of shade that will select from list of other shades based on recursive noise field.
+    Because of the exponential nature of recursive calls, this shade can lead to long run times.
+
+    Initialisation Parameters:
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made. Defaults to initalisation of NoiseField().
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels. Defaults to 0.
+    color_variance (int): How much noise is allowed to affect the color from the central shade
+    noise_field (NoiseFields): A noise field for selection of shade.
+    depth (int): Number of recursive calls of noise to make. Defaults to 1. Setting to 0 will non-recursive noise is used.
+    feedback (float): The size of effect of recursive noise calls. For normal affects set within 0-1 range. Defaults to 0.7.
+    shades (list of iterables): Determines when shades are select, items in list must be in form of (lower_bound, upper_bound, Shade). For example passing in a list of [(0,0.4,BlockColor(color=(0,0,0))),(0.6,0.8,NoiseGradient(color=(255,255,255)))] will mean that when a noise value of between 0 and 0.4 is recieved, a pixel will be shaded black, when a value of between 0.6 and 0.8 is recieved a pixel will be shaded with a white noise gradient. If a number outside of that range is recieved, nothing will happen. If overlapping ranges are present, the first item in the list will be selected over the others.
+    """
+    def __init__(self, warp_noise=(NoiseField(),NoiseField()), warp_size=0, color_variance=70, noise_field=NoiseField(), depth=1, feedback=0.7, shades=[]):
+        super().__init__(transparency = 0, warp_noise = warp_noise, warp_size = warp_size)
+        self.color_variance = color_variance
+        self.noise_field = noise_field
+        self.depth = depth
+        self.feedback = feedback
+        self.shades = shades
+        self.transparent = BlockColor(transparency=1)
+
+    def determine_shade(self, xy):
+        """
+        Determines shade based on xy coordinates.
+
+        Parameters:
+        xy (iterable): xy coordinates
+
+        Returns:
+        color in form of tuple
+        """
+        noise = self.noise_field.recursive_noise(xy, self.depth, self.feedback)
+        shades = [s for s in self.shades if noise > s[0] and noise < s[1]]
+        if len(shades) > 0:
+            shade = shades[0][2]
+            return shade.determine_shade(xy)

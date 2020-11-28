@@ -14,6 +14,12 @@ Current existing shades are:
     * DomainWarpGradient
     * SwirlOfShades
 
+## Installing Shades
+
+Shades is pip installable with:
+'''
+python -m pip install shades
+'''
 
 ## Using Shades
 

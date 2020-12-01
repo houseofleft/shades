@@ -5,6 +5,15 @@ from opensimplex import OpenSimplex
 from math import pi, sin, cos, radians
 
 def color_clamp(color):
+    """
+    Ensures a three part iterable is a properly formatted color.
+
+    Parameters:
+    color (tuple): RGB tuple
+
+    Returns:
+    color (tuple): Same color as input, as integers between 0 and 255
+    """
     clamped_color = [max(min(int(i), 255), 0) for i in color]
     return tuple(clamped_color)
 
@@ -155,18 +164,33 @@ class Shade(ABC):
         except:
             pass
 
-    def _iterables_between_two_points(self, xy1, xy2):
+    def pixels_inside_border(self, border_pixels):
         """
-        Finds required x_step, y_step and i_stop (when to stop iterating) to move between point xy1 and xy2.
+        Returns a list of  pixels from inside a border of points
+
+        Parameters:
+        border_pixels (coordinates iterables): a list of coordinates (ie. (4,7))
+
+        Returns:
+        pixels within border (list)
+        """
+        inner_pixels = []
+        for x in set([b[0] for b in border_pixels]):
+            start = min([b[1] for b in border_pixels if b[0] == x])
+            end = max([b[1] for b in border_pixels if b[0] == x])
+            inner_pixels.extend([(x,i) for i in range(start, end + 1)])
+        return inner_pixels
+
+    def pixels_between_two_points(self, xy1, xy2):
+        """
+        Returns a list of pixels that form a straight line between two points.
 
         Parameters:
         xy1 (int iterable): Coordinates for first point.
         xy2 (int iterable): Coordinates for second point.
 
-        Return:
-        x_step (float): Addition for x for each iterable.
-        y_step (float): Addition for y for each iterable.
-        i_stop (int): How many iterations between xy1 and xy2.
+        Returns:
+        pixels (int iterable): List of pixels between the two points.
         """
         if abs(xy1[0] - xy2[0]) > abs(xy1[1] - xy2[1]):
             if xy1[0] > xy2[0]:
@@ -175,7 +199,7 @@ class Shade(ABC):
                 x_step = 1
             y_step = ( abs(xy1[1] - xy2[1]) / abs(xy1[0] - xy2[0]) )
             if xy1[1] > xy2[1]:
-                y_step *= -1
+               y_step *= -1
             i_stop = abs(xy1[0] - xy2[0])
         else:
             if xy1[1] > xy2[1]:
@@ -184,8 +208,17 @@ class Shade(ABC):
                 y_step = 1
             x_step = ( abs(xy1[0] - xy2[0]) / abs(xy1[1] - xy2[1]) )
             if xy1[0] > xy2[0]:
-                x_step *= -1
+               x_step *= -1
             i_stop = abs(xy1[1]-xy2[1])
+
+        pixels = []
+        x, y = xy1
+        for i in range(0, int(i_stop) + 1):
+            pixels.append((int(x),int(y)))
+            x += x_step
+            y += y_step
+        return pixels
+
         return x_step, y_step, int(i_stop)
 
     def line(self, canvas, xy1, xy2, weight=2):
@@ -200,13 +233,8 @@ class Shade(ABC):
 
         (no returns)
         """
-        x_step, y_step, i_stop = self._iterables_between_two_points(xy1, xy2)
-        x = xy1[0]
-        y = xy1[1]
-        for i in range(0, i_stop):
-            self.rectangle(canvas, (int(x),int(y)), weight, weight)
-            x += x_step
-            y += y_step
+        for pixel in self.pixels_between_two_points(xy1, xy2):
+            self.rectangle(canvas, pixel, weight, weight)
 
     def fill(self, canvas):
         """
@@ -223,6 +251,22 @@ class Shade(ABC):
         [[self.point(canvas, (x,y)) for x in range(0, canvas.width)] for y in range(0, canvas.height)]
         self.warp_size = warp_size_keeper
 
+    def shape(self, canvas, list_of_points):
+        """
+        Draws a shape on an image based on a list of points.
+
+        Parameters:
+        canvas (PIL Image): Image to draw on.
+        list_of_points (coordinates iterable): List of points with which to make shape (these will connect in the order given)
+
+        (no returns)
+        """
+        border = self.pixels_between_two_points(list_of_points[-1], list_of_points[0])
+        for i in range(0, len(list_of_points)-1):
+            border += self.pixels_between_two_points(list_of_points[i], list_of_points[i+1])
+        for pixel in self.pixels_inside_border(border):
+            self.point(canvas, pixel)
+
     def rectangle(self, canvas, xy, width, height):
         """
         Draws a rectangle on the image.
@@ -237,6 +281,20 @@ class Shade(ABC):
         """
         [[self.point(canvas, (x,y)) for x in range(int(xy[0]), int(xy[0] + width))] for y in range(int(xy[1]), int(xy[1] + height))]
 
+    def triangle(self, canvas, xy1, xy2, xy3):
+        """
+        Draws a triangle on the image.
+        Note that this is the same as calling shape with a list of three points.
+
+        Parameters:
+        canvas (PIL Image): Image to draw on.
+        xy1 (int iterable): Coordinates for first point of triangle.
+        xy2 (int iterable): Coordinates for second point of triangle.
+        xy3 (int iterable): Coordinates for third point of triangle.
+
+        (no returns)
+        """
+        self.shape(canvas, [xy1, xy2, xy3])
 
     def circle(self, canvas, xy, radius):
         """
@@ -249,34 +307,54 @@ class Shade(ABC):
 
         (no returns)
         """
-        for h in range(0, int(radius),2):
-            circumfurence = radius * 2 * pi
-            for c in [x for x in range(0, (int(circumfurence)+1))]:
-                angle = (c/circumfurence) * 360
-                opposite = sin(radians(angle)) * h
-                adjacent = cos(radians(angle)) * h
-                self.rectangle(canvas, (xy[0] + adjacent, xy[1] + opposite), 3, 3)
+        circumfurence = radius * 2 * pi
+        border_pixels = []
+        for c in range(0, int(circumfurence)):
+            angle = (c/circumfurence) * 360
+            opposite = sin(radians(angle)) * radius
+            adjacent = cos(radians(angle)) * radius
+            point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
+            border_pixels.append(point)
+        for pixel in self.pixels_inside_border(border_pixels):
+            self.point(canvas, pixel)
 
-    def triangle(self, canvas, xy1, xy2, xy3):
+    def diet_pizza_slice(self, canvas, xy, radius, start_angle, degrees_of_slice):
         """
-        Draws a triangle on the image.
+        Mostly an internal functions. Draws a partial circle, up to a semi-circle.
 
         Parameters:
         canvas (PIL Image): Image to draw on.
-        xy1 (int iterable): Coordinates for first point of triangle.
-        xy2 (int iterable): Coordinates for second point of triangle.
-        xy3 (int iterable): Coordinates for third point of triangle.
 
-        (no returns)
         """
-        # move from xy1 to xy2 and draw line to xy3 at each point
-        x_step, y_step, i_stop = self._iterables_between_two_points(xy1, xy2)
-        x = xy1[0]
-        y = xy1[1]
-        for i in range(0, i_stop):
-            self.line(canvas, (x,y), xy3, 3)
-            x += x_step
-            y += y_step
+
+        degrees_of_slice = max(min(degrees_of_slice, 180), -180)
+
+        circumference = radius * 2 * pi
+
+        start_point = int( ( ( (start_angle - 90) % 361 ) / 360 ) * circumference )
+        slice_length = int( ( degrees_of_slice / 360 ) * circumference )
+        end_point = start_point + slice_length
+        border_pixels = []
+
+        for c in range(start_point, end_point + 1):
+            angle = (c/circumference) * 360
+            opposite = sin(radians(angle)) * radius
+            adjacent = cos(radians(angle)) * radius
+            point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
+            border_pixels.append(point)
+            if c == start_point or c == end_point:
+                border_pixels += self.pixels_between_two_points(point, xy)
+
+        for pixel in self.pixels_inside_border(border_pixels):
+            self.point(canvas, pixel)
+
+    def pizza_slice(self, canvas, xy, radius, start_angle, degrees_of_slice):
+        if degrees_of_slice <= 180:
+            self.diet_pizza_slice(canvas, xy, radius, start_angle, degrees_of_slice)
+        else:
+            degrees_of_slice = max(min(degrees_of_slice, 360), -360)
+            self.diet_pizza_slice(canvas, xy, radius, start_angle, degrees_of_slice)
+            self.diet_pizza_slice(canvas, xy, radius, start_angle+180, degrees_of_slice-180)
 
 
 class BlockColor(Shade):

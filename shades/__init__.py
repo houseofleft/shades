@@ -488,3 +488,82 @@ class SwirlOfShades(Shade):
         if len(shades) > 0:
             shade = shades[0][2]
             return shade.determine_shade(xy)
+
+class LinearGradient(Shade):
+    """
+    Type of shade that will determine color based on transition between various 'color_points'
+
+    Initialisation parameters:
+    color_points (list of pairs): Groups of colours and the coordinate (based on axis) at which they should appear. Something like: [((255,10,23), 60), ((240, 240, 240), 200), ((0, 255, 0), 500)]
+    axis (int): 0 for horizontal gradient, 1 for vertical
+    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
+    """
+    def __init__(self, color_points, axis=0, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
+        super().__init__(transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+        self.color_points = color_points
+        self.axis = axis
+
+    def determine_shade(self, xy):
+        """
+        Determines shade based on xy coordinates.
+
+        Parameters:
+        xy (iterable): xy coordinates
+
+        Returns:
+        color in form of tuple
+        """
+        larger = [i[1] for i in self.color_points if i[1] >= xy[self.axis]]
+        smaller = [i[1] for i in self.color_points if i[1] < xy[self.axis]]
+        if len(smaller) == 0:
+            next = min(larger)
+            next_color = [i[0] for i in self.color_points if i[1] == next][0]
+            return next_color
+        elif len(larger) == 0:
+            last = max(smaller)
+            last_color = [i[0] for i in self.color_points if i[1] == last][0]
+            return last_color
+
+        next = min(larger)
+        last = max(smaller)
+
+        next_color = [i[0] for i in self.color_points if i[1] == next][0]
+        last_color = [i[0] for i in self.color_points if i[1] == last][0]
+        distance_from_next = abs(next - xy[self.axis])
+        distance_from_last = abs(last - xy[self.axis])
+        from_last_to_next = distance_from_last / (distance_from_next + distance_from_last)
+
+        color = [0, 0, 0]
+        for i in range(3):
+            color_difference = (last_color[i] - next_color[i]) * from_last_to_next
+            color[i] = last_color[i] - color_difference
+
+        return color_clamp(color)
+
+class VerticalGradient(LinearGradient):
+    """
+    Type of shade that will determine color based on transition between various 'color_points'
+
+    Initialisation parameters:
+    color_points (list of pairs): Groups of colours and the y coordinate at which they should appear. Something like: [((255,10,23), 60), ((240, 240, 240), 200), ((0, 255, 0), 500)]
+    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
+    """
+    def __init__(self, color_points, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
+        super().__init__(color_points=color_points, axis=1, transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+
+class HorizontalGradient(LinearGradient):
+    """
+    Type of shade that will determine color based on transition between various 'color_points'
+
+    Initialisation parameters:
+    color_points (list of pairs): Groups of colours and the x coordinate at which they should appear. Something like: [((255,10,23), 60), ((240, 240, 240), 200), ((0, 255, 0), 500)]
+    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
+    """
+    def __init__(self, color_points, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
+        super().__init__(color_points=color_points, axis=0, transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)

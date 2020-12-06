@@ -9,17 +9,25 @@ The main abstract object is a 'shade' which will determine color based on rules,
 The majority of these implement simplex noise fields to determine color resulting in images that will appear different each time they are generated.
 
 Current existing shades are:
-    * BlockColor
-    * NoiseGradient
-    * DomainWarpGradient
-    * SwirlOfShades
 
-## Installing Shades
+* BlockColor
+* HorizontalGradient
+* VerticalGradient
+* PointGradients
+* NoiseGradient
+* DomainWarpGradient
+* SwirlOfShades
 
-Shades is pip installable with:
-'''
-python -m pip install shades
-'''
+All shades have inherit internal methods that can be used for drawing on images.
+
+Current existing methods are:
+
+* rectangle
+* triangle
+* shape
+* circle
+* pizza_slice
+* fill
 
 ## Using Shades
 
@@ -53,3 +61,6 @@ canvas.show()
 canvas.save('picture.png')
 ```
 
+# Installing Shades
+
+Shades is pip installable with *python -m pip install shades*

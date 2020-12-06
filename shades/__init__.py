@@ -1,8 +1,8 @@
-from PIL import Image
 from abc import ABC, abstractmethod
 import random
+import numpy as np
+from PIL import Image
 from opensimplex import OpenSimplex
-from math import pi, sin, cos, radians
 
 def color_clamp(color):
     """
@@ -16,6 +16,20 @@ def color_clamp(color):
     """
     clamped_color = [max(min(int(i), 255), 0) for i in color]
     return tuple(clamped_color)
+
+def distance_between_points(xy1, xy2):
+    """
+    Returns the euclidean distance between two points.
+    https://en.wikipedia.org/wiki/Euclidean_distance
+
+    Parameters:
+    xy1 (coordinate): first point
+    xy2 (coordiante): second point
+
+    Returns:
+    float: euclidean distance betewen the two points
+    """
+    return (((xy1[0] - xy2[0]) ** 2) + ((xy1[1] - xy2[1]) ** 2)) ** 0.5
 
 def Canvas(height=700, width=700, color=(240,240,240)):
     """
@@ -164,22 +178,57 @@ class Shade(ABC):
         except:
             pass
 
-    def pixels_inside_border(self, border_pixels):
+    def weighted_point(self, canvas, xy, weight):
         """
-        Returns a list of  pixels from inside a border of points
+        Determines colour and draws a weighted point on an image.
 
         Parameters:
-        border_pixels (coordinates iterables): a list of coordinates (ie. (4,7))
+        xy (iterable): xy coordinates.
+        canvas (PIL Image): Image to draw point on.
+        wieght (int): Weight of point
+
+        (no returns)
+        """
+        color = self.determine_shade(xy)
+        if self.warp_size != 0:
+            xy = self.adjust_point(xy)
+
+        try:
+            color = self.apply_transparency(xy, canvas, color)
+            for x in range(0,weight):
+                for y in range(0,weight):
+                    try:
+                        canvas.putpixel((int(xy[0]+x),int(xy[1]+y)), color)
+                    except:
+                        pass
+        except:
+            pass
+
+    def pixels_inside_edge(self, edge_pixels):
+        """
+        Returns a list of  pixels from inside a edge of points using ray casting algorithm
+        https://en.wikipedia.org/wiki/Point_in_polygon
+        vertex correction still needs some perfecting, unusual or particularly angular shapes may cause difficulties
+
+        Parameters:
+        edge_pixels (coordinates iterables): a list of coordinates (ie. (4,7))
 
         Returns:
-        pixels within border (list)
+        pixels within edge (list)
         """
         inner_pixels = []
-        for x in set([b[0] for b in border_pixels]):
-            start = min([b[1] for b in border_pixels if b[0] == x])
-            end = max([b[1] for b in border_pixels if b[0] == x])
-            inner_pixels.extend([(x,i) for i in range(start, end + 1)])
-        return inner_pixels
+        xs = set([b[0] for b in edge_pixels])
+        for x in range(min(xs), max(xs)+1):
+            ys = set([b[1] for b in edge_pixels if b[0] == x])
+            ys = [y for y in ys if y-1 not in ys]
+            ray_count = 0
+            for y in range(min(ys), max(ys)+1):
+                if y in ys and (x,y):
+                    ray_count += 1
+                if ray_count % 2 == 1:
+                    inner_pixels.append((x,y))
+
+        return list(set(inner_pixels + edge_pixels))
 
     def pixels_between_two_points(self, xy1, xy2):
         """
@@ -234,7 +283,7 @@ class Shade(ABC):
         (no returns)
         """
         for pixel in self.pixels_between_two_points(xy1, xy2):
-            self.rectangle(canvas, pixel, weight, weight)
+            self.weighted_point(canvas, pixel, weight)
 
     def fill(self, canvas):
         """
@@ -251,6 +300,21 @@ class Shade(ABC):
         [[self.point(canvas, (x,y)) for x in range(0, canvas.width)] for y in range(0, canvas.height)]
         self.warp_size = warp_size_keeper
 
+    def get_shape_edge(self, list_of_points):
+        """
+        Returns list of coordinates making up the edge of a shape
+
+        Parameters:
+        list_of_points (coordinates iterable): List of points with which to make shape (these will connect in the order given)
+
+        Returns:
+        edge (list of coordinates): Coordinates making up the edge of shape
+        """
+        edge = self.pixels_between_two_points(list_of_points[-1], list_of_points[0])
+        for i in range(0, len(list_of_points)-1):
+            edge += self.pixels_between_two_points(list_of_points[i], list_of_points[i+1])
+        return edge
+
     def shape(self, canvas, list_of_points):
         """
         Draws a shape on an image based on a list of points.
@@ -261,11 +325,23 @@ class Shade(ABC):
 
         (no returns)
         """
-        border = self.pixels_between_two_points(list_of_points[-1], list_of_points[0])
-        for i in range(0, len(list_of_points)-1):
-            border += self.pixels_between_two_points(list_of_points[i], list_of_points[i+1])
-        for pixel in self.pixels_inside_border(border):
+        edge = self.get_shape_edge(list_of_points)
+        for pixel in self.pixels_inside_edge(edge):
             self.point(canvas, pixel)
+
+    def shape_outline(self, canvas, list_of_points, weight=2):
+        """
+        Draws a shape outline on an image based on a list of points.
+
+        Parameters:
+        canvas (PIL Image): Image to draw on.
+        list_of_points (coordinates iterable): List of points with which to make shape (these will connect in the order given)
+        weight: Weight of outline
+
+        (no returns)
+        """
+        for pixel in self.get_shape_edge(list_of_points):
+            self.weighted_point(canvas, pixel, weight)
 
     def rectangle(self, canvas, xy, width, height):
         """
@@ -284,7 +360,7 @@ class Shade(ABC):
     def triangle(self, canvas, xy1, xy2, xy3):
         """
         Draws a triangle on the image.
-        Note that this is the same as calling shape with a list of three points.
+        Note that this is the same as calling Shade.shape with a list of three points.
 
         Parameters:
         canvas (PIL Image): Image to draw on.
@@ -295,6 +371,43 @@ class Shade(ABC):
         (no returns)
         """
         self.shape(canvas, [xy1, xy2, xy3])
+
+    def triangle_outline(self, canvas, xy1, xy2, xy3, weight=2):
+        """
+        Draws a triangle outline on the image.
+        Note that this is the same as calling Shade.shape_outline with a list of three points.
+
+        Parameters:
+        canvas (PIL Image): Image to draw on.
+        xy1 (int iterable): Coordinates for first point of triangle.
+        xy2 (int iterable): Coordinates for second point of triangle.
+        xy3 (int iterable): Coordinates for third point of triangle.
+        weight (int): Weight of outline
+
+        (no returns)
+        """
+        self.shape_outline(canvas, [xy1, xy2, xy3], weight)
+
+    def get_circle_edge(self, xy, radius):
+        """
+        Returns the edge coordinates of a circle
+
+        Parameters:
+        xy (coordinates): center of circle
+        radius: radius of circle
+
+        Returns:
+        list of points (coordinates iterable)
+        """
+        edge_pixels = []
+        circumference = radius * 2 * np.pi
+        for c in range(0, int(circumference)+1):
+            angle = (c/circumference) * 360
+            opposite = np.sin(np.radians(angle)) * radius
+            adjacent = np.cos(np.radians(angle)) * radius
+            point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
+            edge_pixels.append(point)
+        return edge_pixels
 
     def circle(self, canvas, xy, radius):
         """
@@ -307,54 +420,65 @@ class Shade(ABC):
 
         (no returns)
         """
-        circumfurence = radius * 2 * pi
-        border_pixels = []
-        for c in range(0, int(circumfurence)):
-            angle = (c/circumfurence) * 360
-            opposite = sin(radians(angle)) * radius
-            adjacent = cos(radians(angle)) * radius
-            point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
-            border_pixels.append(point)
-        for pixel in self.pixels_inside_border(border_pixels):
+        edge_pixels = self.get_circle_edge(xy, radius)
+        for pixel in self.pixels_inside_edge(edge_pixels):
             self.point(canvas, pixel)
 
-    def diet_pizza_slice(self, canvas, xy, radius, start_angle, degrees_of_slice):
+    def circle_outline(self, canvas, xy, radius, weight=2):
         """
-        Mostly an internal functions. Draws a partial circle, up to a semi-circle.
+        Draws a circle outline on the image.
 
         Parameters:
         canvas (PIL Image): Image to draw on.
+        xy (int iterable): Coordinates for center of circle.
+        radius (int): Radius of the circle
+        weight (int): Weight of the outline
 
+        (no returns)
         """
-
-        degrees_of_slice = max(min(degrees_of_slice, 180), -180)
-
-        circumference = radius * 2 * pi
-
-        start_point = int( ( ( (start_angle - 90) % 361 ) / 360 ) * circumference )
-        slice_length = int( ( degrees_of_slice / 360 ) * circumference )
-        end_point = start_point + slice_length
-        border_pixels = []
-
-        for c in range(start_point, end_point + 1):
-            angle = (c/circumference) * 360
-            opposite = sin(radians(angle)) * radius
-            adjacent = cos(radians(angle)) * radius
-            point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
-            border_pixels.append(point)
-            if c == start_point or c == end_point:
-                border_pixels += self.pixels_between_two_points(point, xy)
-
-        for pixel in self.pixels_inside_border(border_pixels):
-            self.point(canvas, pixel)
+        edge_pixels = self.get_circle_edge(xy, radius)
+        for pixel in edge_pixels:
+            self.weighted_point(canvas, pixel, weight)
 
     def pizza_slice(self, canvas, xy, radius, start_angle, degrees_of_slice):
-        if degrees_of_slice <= 180:
-            self.diet_pizza_slice(canvas, xy, radius, start_angle, degrees_of_slice)
+        """
+        Draws a partial circle based on degrees.
+        (will have the appearance of a 'pizza slice' or 'pacman' depending on degrees).
+
+        Parameters:
+        canvas (PIL Image): Image to draw on.
+        xy (int iterable): Coordinates for the center
+        radius (int): Radius of the circle
+        start_angle (int): degree point to start on. Will start from 12 o'clock position, and move clockwise around
+        degrees_of_slice (int): degree point to move around circle from
+        """
+
+        # due to Shade.pixels_between_two_points vertex correction issues, breaks down shape into smaller parts
+        def _internal(canvas, xy, radius, start_angle, degrees_of_slice):
+            circumference = radius * 2 * np.pi
+
+            start_point = int( ( ( (start_angle - 90) % 361 ) / 360 ) * circumference )
+            slice_length = int( ( degrees_of_slice / 360 ) * circumference )
+            end_point = start_point + slice_length
+            edge_pixels = []
+
+            for c in range(start_point, end_point + 1):
+                angle = (c/circumference) * 360
+                opposite = np.sin(np.radians(angle)) * radius
+                adjacent = np.cos(np.radians(angle)) * radius
+                point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
+                edge_pixels.append(point)
+                if c == start_point or c == end_point:
+                    edge_pixels += self.pixels_between_two_points(point, xy)
+
+            for pixel in self.pixels_inside_edge(edge_pixels):
+                self.point(canvas, pixel)
+
+        if degrees_of_slice > 180:
+            _internal(canvas, xy, radius, start_angle, 180)
+            _internal(canvas, xy, radius, start_angle + 180, degrees_of_slice - 180)
         else:
-            degrees_of_slice = max(min(degrees_of_slice, 360), -360)
-            self.diet_pizza_slice(canvas, xy, radius, start_angle, degrees_of_slice)
-            self.diet_pizza_slice(canvas, xy, radius, start_angle+180, degrees_of_slice-180)
+            _internal(canvas, xy, radius, start_angle, degrees_of_slice)
 
 
 class BlockColor(Shade):
@@ -567,3 +691,34 @@ class HorizontalGradient(LinearGradient):
     """
     def __init__(self, color_points, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
         super().__init__(color_points=color_points, axis=0, transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+
+class PointGradient(Shade):
+    """
+    Type of shade that will determine color based on proximity to various 'color_points'
+
+    Initialisation parameters:
+    color_points (list of pairs): Groups of colours and the coordinates at which they should appear. Something like: [((255,10,23), (34, 60)), ((240, 240, 240), (100, 200)), ((0, 255, 0), (500,600))]
+    axis (int): 0 for horizontal gradient, 1 for vertical
+    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
+    warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
+    warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
+    """
+    def __init__(self, color_points, axis=0, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
+        super().__init__(transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+        self.color_points = color_points
+        self.axis = axis
+
+    def determine_shade(self,xy):
+        """
+        Determines shade based on xy coordinates.
+
+        Parameters:
+        xy (iterable): xy coordinates
+
+        Returns:
+        color in form of tuple
+        """
+        colors = [i[0] for i in self.color_points]
+        weights = [1/distance_between_points(xy, i[1]) for i in self.color_points]
+        color = [np.average([c[i] for c in colors], weights=weights) for i in range(3)]
+        return color_clamp(color)

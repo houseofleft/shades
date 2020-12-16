@@ -719,6 +719,6 @@ class PointGradient(Shade):
         color in form of tuple
         """
         colors = [i[0] for i in self.color_points]
-        weights = [1/distance_between_points(xy, i[1]) for i in self.color_points]
+        weights = [1/(distance_between_points(xy, i[1])+0.0001) for i in self.color_points]
         color = [np.average([c[i] for c in colors], weights=weights) for i in range(3)]
         return color_clamp(color)

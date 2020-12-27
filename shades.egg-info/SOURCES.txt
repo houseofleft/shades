@@ -1,0 +1,7 @@
+README.md
+setup.py
+shades/__init__.py
+shades.egg-info/PKG-INFO
+shades.egg-info/SOURCES.txt
+shades.egg-info/dependency_links.txt
+shades.egg-info/top_level.txt

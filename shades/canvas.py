@@ -1,9 +1,6 @@
-from abc import ABC, abstractmethod
-import random
-import numpy as np
 from PIL import Image
-from opensimplex import OpenSimplex
 from utils import *
+
 
 def Canvas(height=700, width=700, color=(240, 240, 240)):
     """
@@ -17,4 +14,10 @@ def Canvas(height=700, width=700, color=(240, 240, 240)):
     Returns:
     PIL Image
     """
-    return Image.new('RGB', (int(height), int(width)), color_clamp(color))
+    image = Image.new('RGB', (int(height), int(width)), color_clamp(color))
+    # adding methods or state is pretty restricted by PIL design
+    # but a couple of QOL object variables
+    image.x_center = int(image.width/2)
+    image.y_center = int(image.height/2)
+    image.center = (image.x_center, image.y_center)
+    return image

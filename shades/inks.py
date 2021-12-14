@@ -1,8 +1,5 @@
 from abc import ABC, abstractmethod
-import random
 import numpy as np
-from PIL import Image
-from opensimplex import OpenSimplex
 from noise_fields import *
 
 class Shade(ABC):
@@ -16,7 +13,7 @@ class Shade(ABC):
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
 
-    def __init__(self, color=(0,0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
+    def __init__(self, color=(0, 0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
         self.color = color
         self.transparency = transparency
         self.warp_noise = warp_noise
@@ -86,6 +83,14 @@ class Shade(ABC):
         except:
             pass
 
+    def in_bounds(self, canvas, xy):
+        if (xy[0] < 0) or (xy[0] >= canvas.width):
+            return False
+        elif (xy[1] < 0) or (xy[1] >= canvas.height):
+            return False
+        else:
+            return True
+
     def weighted_point(self, canvas, xy, weight):
         """
         Determines colour and draws a weighted point on an image.
@@ -100,17 +105,16 @@ class Shade(ABC):
         color = self.determine_shade(xy)
         if self.warp_size != 0:
             xy = self.adjust_point(xy)
-
-        try:
+        if self.in_bounds(canvas, xy):
             color = self.apply_transparency(xy, canvas, color)
-            for x in range(0,weight):
-                for y in range(0,weight):
+        for x in range(0,weight):
+            for y in range(0,weight):
+                if self.in_bounds(canvas, xy):
                     try:
                         canvas.putpixel((int(xy[0]+x),int(xy[1]+y)), color)
                     except:
-                        pass
-        except:
-            pass
+                        import pdb; pdb.set_trace()
+                
 
     def pixels_inside_edge(self, edge_pixels):
         """

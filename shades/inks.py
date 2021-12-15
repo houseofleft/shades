@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from noise_fields import *
+from utils import *
+
 
 class Shade(ABC):
     """
@@ -8,14 +10,12 @@ class Shade(ABC):
 
     Initialisation Parameters:
     color (tuple): RGB color of shade
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
 
-    def __init__(self, color=(0, 0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
+    def __init__(self, color=(0, 0, 0), warp_noise=(NoiseField(), NoiseField()), warp_size=0):
         self.color = color
-        self.transparency = transparency
         self.warp_noise = warp_noise
         self.warp_size = warp_size
 
@@ -33,22 +33,6 @@ class Shade(ABC):
         """
         pass
 
-    def apply_transparency(self, xy, canvas, color):
-        """
-        If transparency settings are applied, appropriately adjusts color
-
-        Parameters:
-        xy (iterable): xy coordinates
-        canvas (PIL image): Image mark is to be made on.
-        color (tuple): Initial color before transparency has been applied.
-
-        Returns:
-        color (tuple)
-        """
-        initial_color = canvas.getpixel((int(xy[0]),int(xy[1])))
-        new_color = [int(initial_color[i] + ((color[i] - initial_color[i]) * (1-self.transparency))) for i in range(0,3)]
-        return tuple(new_color)
-
     def adjust_point(self, xy):
         """
         If warp is applied in shade, appropriately adjusts location of point.
@@ -61,7 +45,7 @@ class Shade(ABC):
         """
         x = xy[0] + (self.warp_noise[0].noise(xy) * self.warp_size)
         y = xy[1] + (self.warp_noise[1].noise(xy) * self.warp_size)
-        return (x,y)
+        return (x, y)
 
     def point(self, canvas, xy):
         """
@@ -77,11 +61,8 @@ class Shade(ABC):
         if self.warp_size != 0:
             xy = self.adjust_point(xy)
 
-        try:
-            color = self.apply_transparency(xy, canvas, color)
-            canvas.putpixel((int(xy[0]),int(xy[1])), color)
-        except:
-            pass
+        if self.in_bounds(canvas, xy):
+            canvas.putpixel((int(xy[0]), int(xy[1])), color)
 
     def in_bounds(self, canvas, xy):
         if (xy[0] < 0) or (xy[0] >= canvas.width):
@@ -105,16 +86,12 @@ class Shade(ABC):
         color = self.determine_shade(xy)
         if self.warp_size != 0:
             xy = self.adjust_point(xy)
-        if self.in_bounds(canvas, xy):
-            color = self.apply_transparency(xy, canvas, color)
-        for x in range(0,weight):
-            for y in range(0,weight):
-                if self.in_bounds(canvas, xy):
-                    try:
-                        canvas.putpixel((int(xy[0]+x),int(xy[1]+y)), color)
-                    except:
-                        import pdb; pdb.set_trace()
-                
+
+        for x in range(0, weight):
+            for y in range(0, weight):
+                new_point = (int(xy[0]+x), int(xy[1]+y))
+                if self.in_bounds(canvas, new_point):
+                    canvas.putpixel(new_point, color)
 
     def pixels_inside_edge(self, edge_pixels):
         """
@@ -135,10 +112,10 @@ class Shade(ABC):
             ys = [y for y in ys if y-1 not in ys]
             ray_count = 0
             for y in range(min(ys), max(ys)+1):
-                if y in ys and (x,y):
+                if y in ys and (x, y):
                     ray_count += 1
                 if ray_count % 2 == 1:
-                    inner_pixels.append((x,y))
+                    inner_pixels.append((x, y))
 
         return list(set(inner_pixels + edge_pixels))
 
@@ -158,24 +135,24 @@ class Shade(ABC):
                 x_step = -1
             else:
                 x_step = 1
-            y_step = ( abs(xy1[1] - xy2[1]) / abs(xy1[0] - xy2[0]) )
+            y_step = (abs(xy1[1] - xy2[1]) / abs(xy1[0] - xy2[0]))
             if xy1[1] > xy2[1]:
-               y_step *= -1
+                y_step *= -1
             i_stop = abs(xy1[0] - xy2[0])
         else:
             if xy1[1] > xy2[1]:
                 y_step = -1
             else:
                 y_step = 1
-            x_step = ( abs(xy1[0] - xy2[0]) / abs(xy1[1] - xy2[1]) )
+            x_step = (abs(xy1[0] - xy2[0]) / abs(xy1[1] - xy2[1]))
             if xy1[0] > xy2[0]:
-               x_step *= -1
+                x_step *= -1
             i_stop = abs(xy1[1]-xy2[1])
 
         pixels = []
         x, y = xy1
         for i in range(0, int(i_stop) + 1):
-            pixels.append((int(x),int(y)))
+            pixels.append((int(x), int(y)))
             x += x_step
             y += y_step
         return pixels
@@ -209,7 +186,8 @@ class Shade(ABC):
         # we'll temporarily turn off warping as it isn't needed here
         warp_size_keeper = self.warp_size
         self.warp_size = 0
-        [[self.point(canvas, (x,y)) for x in range(0, canvas.width)] for y in range(0, canvas.height)]
+        [[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
+         for y in range(0, canvas.height)]
         self.warp_size = warp_size_keeper
 
     def get_shape_edge(self, list_of_points):
@@ -222,9 +200,11 @@ class Shade(ABC):
         Returns:
         edge (list of coordinates): Coordinates making up the edge of shape
         """
-        edge = self.pixels_between_two_points(list_of_points[-1], list_of_points[0])
+        edge = self.pixels_between_two_points(
+            list_of_points[-1], list_of_points[0])
         for i in range(0, len(list_of_points)-1):
-            edge += self.pixels_between_two_points(list_of_points[i], list_of_points[i+1])
+            edge += self.pixels_between_two_points(
+                list_of_points[i], list_of_points[i+1])
         return edge
 
     def shape(self, canvas, list_of_points):
@@ -267,7 +247,8 @@ class Shade(ABC):
 
         (no returns)
         """
-        [[self.point(canvas, (x,y)) for x in range(int(xy[0]), int(xy[0] + width))] for y in range(int(xy[1]), int(xy[1] + height))]
+        [[self.point(canvas, (x, y)) for x in range(int(xy[0]), int(xy[0] + width))]
+         for y in range(int(xy[1]), int(xy[1] + height))]
 
     def triangle(self, canvas, xy1, xy2, xy3):
         """
@@ -317,7 +298,7 @@ class Shade(ABC):
             angle = (c/circumference) * 360
             opposite = np.sin(np.radians(angle)) * radius
             adjacent = np.cos(np.radians(angle)) * radius
-            point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
+            point = (int(xy[0] + adjacent), int(xy[1] + opposite))
             edge_pixels.append(point)
         return edge_pixels
 
@@ -369,8 +350,9 @@ class Shade(ABC):
         def _internal(canvas, xy, radius, start_angle, degrees_of_slice):
             circumference = radius * 2 * np.pi
 
-            start_point = int( ( ( (start_angle - 90) % 361 ) / 360 ) * circumference )
-            slice_length = int( ( degrees_of_slice / 360 ) * circumference )
+            start_point = int(
+                (((start_angle - 90) % 361) / 360) * circumference)
+            slice_length = int((degrees_of_slice / 360) * circumference)
             end_point = start_point + slice_length
             edge_pixels = []
 
@@ -378,7 +360,7 @@ class Shade(ABC):
                 angle = (c/circumference) * 360
                 opposite = np.sin(np.radians(angle)) * radius
                 adjacent = np.cos(np.radians(angle)) * radius
-                point = ( int(xy[0] + adjacent), int(xy[1] + opposite) )
+                point = (int(xy[0] + adjacent), int(xy[1] + opposite))
                 edge_pixels.append(point)
                 if c == start_point or c == end_point:
                     edge_pixels += self.pixels_between_two_points(point, xy)
@@ -388,7 +370,8 @@ class Shade(ABC):
 
         if degrees_of_slice > 180:
             _internal(canvas, xy, radius, start_angle, 180)
-            _internal(canvas, xy, radius, start_angle + 180, degrees_of_slice - 180)
+            _internal(canvas, xy, radius, start_angle +
+                      180, degrees_of_slice - 180)
         else:
             _internal(canvas, xy, radius, start_angle, degrees_of_slice)
 
@@ -399,10 +382,10 @@ class BlockColor(Shade):
 
     Initialisation Parameters:
     color (tuple): RGB color of shade
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
+
     def determine_shade(self, xy):
         """
         Ignores xy coordinates and returns defined color.
@@ -415,20 +398,21 @@ class BlockColor(Shade):
         """
         return self.color
 
+
 class NoiseGradient(Shade):
     """
     Type of shade that will produce varying gradient based on noise fields.
 
     Initialisation Parameters:
     color (tuple): central RGB color of shade. Defaults to black.
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible. Defaults to 0.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made. Defaults to initalisation of NoiseField().
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels. Defaults to 0.
     color_variance (int): How much noise is allowed to affect the color from the central shade
     noise_fields (iterable of NoiseFields): A noise field for each channel (r,g,b). Defaults to three initialisations of NoiseField().
     """
-    def __init__(self, color=(0,0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)]):
-        super().__init__(color, transparency, warp_noise, warp_size)
+
+    def __init__(self, color=(0, 0, 0), warp_noise=(NoiseField(), NoiseField()), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)]):
+        super().__init__(color, warp_noise, warp_size)
         self.color_variance = color_variance
         self.noise_fields = tuple(noise_fields)
 
@@ -446,7 +430,8 @@ class NoiseGradient(Shade):
             noise = self.noise_fields[i].noise(xy) - 0.5
             color_affect = noise * (2*self.color_variance)
             return self.color[i] + color_affect
-        return color_clamp([apply_noise(i) for i in range(0,3)])
+        return color_clamp([apply_noise(i) for i in range(len(self.color))])
+
 
 class DomainWarpGradient(Shade):
     """
@@ -455,7 +440,6 @@ class DomainWarpGradient(Shade):
 
     Initialisation Parameters:
     color (tuple): central RGB color of shade. Defaults to black.
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible. Defaults to 0.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made. Defaults to initalisation of NoiseField().
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels. Defaults to 0.
     color_variance (int): How much noise is allowed to affect the color from the central shade
@@ -463,8 +447,9 @@ class DomainWarpGradient(Shade):
     depth (int): Number of recursive calls of noise to make. Defaults to 1.
     feedback (float): The size of effect of recursive noise calls. For normal affects set within 0-1 range. Defaults to 0.7.
     """
-    def __init__(self, color=(0,0,0), transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)], depth=1, feedback=0.7):
-        super().__init__(color, transparency, warp_noise, warp_size)
+
+    def __init__(self, color=(0, 0, 0), warp_noise=(NoiseField(), NoiseField()), warp_size=0, color_variance=70, noise_fields=[NoiseField() for i in range(3)], depth=1, feedback=0.7):
+        super().__init__(color, warp_noise, warp_size)
         self.color_variance = color_variance
         self.noise_fields = tuple(noise_fields)
         self.depth = depth
@@ -481,10 +466,12 @@ class DomainWarpGradient(Shade):
         color in form of tuple
         """
         def apply_noise(i):
-            noise = self.noise_fields[i].recursive_noise(xy, self.depth, self.feedback) - 0.5
+            noise = self.noise_fields[i].recursive_noise(
+                xy, self.depth, self.feedback) - 0.5
             color_affect = noise * (2*self.color_variance)
             return self.color[i] + color_affect
-        return color_clamp([apply_noise(i) for i in range(0,3)])
+        return color_clamp([apply_noise(i) for i in range(len(color))])
+
 
 class SwirlOfShades(Shade):
     """
@@ -500,14 +487,14 @@ class SwirlOfShades(Shade):
     feedback (float): The size of effect of recursive noise calls. For normal affects set within 0-1 range. Defaults to 0.7.
     shades (list of iterables): Determines when shades are select, items in list must be in form of (lower_bound, upper_bound, Shade). For example passing in a list of [(0,0.4,BlockColor(color=(0,0,0))),(0.6,0.8,NoiseGradient(color=(255,255,255)))] will mean that when a noise value of between 0 and 0.4 is recieved, a pixel will be shaded black, when a value of between 0.6 and 0.8 is recieved a pixel will be shaded with a white noise gradient. If a number outside of that range is recieved, nothing will happen. If overlapping ranges are present, the first item in the list will be selected over the others.
     """
-    def __init__(self, warp_noise=(NoiseField(),NoiseField()), warp_size=0, color_variance=70, noise_field=NoiseField(), depth=1, feedback=0.7, shades=[]):
-        super().__init__(transparency = 0, warp_noise = warp_noise, warp_size = warp_size)
+
+    def __init__(self, warp_noise=(NoiseField(), NoiseField()), warp_size=0, color_variance=70, noise_field=NoiseField(), depth=1, feedback=0.7, shades=[]):
+        super().__init__(warp_noise=warp_noise, warp_size=warp_size)
         self.color_variance = color_variance
         self.noise_field = noise_field
         self.depth = depth
         self.feedback = feedback
         self.shades = shades
-        self.transparent = BlockColor(transparency=1)
 
     def determine_shade(self, xy):
         """
@@ -525,6 +512,7 @@ class SwirlOfShades(Shade):
             shade = shades[0][2]
             return shade.determine_shade(xy)
 
+
 class LinearGradient(Shade):
     """
     Type of shade that will determine color based on transition between various 'color_points'
@@ -532,12 +520,12 @@ class LinearGradient(Shade):
     Initialisation parameters:
     color_points (list of pairs): Groups of colours and the coordinate (based on axis) at which they should appear. Something like: [((255,10,23), 60), ((240, 240, 240), 200), ((0, 255, 0), 500)]
     axis (int): 0 for horizontal gradient, 1 for vertical
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
-    def __init__(self, color_points, axis=0, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
-        super().__init__(transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+
+    def __init__(self, color_points, axis=0, warp_noise=(NoiseField(), NoiseField()), warp_size=0):
+        super().__init__(warp_noise=warp_noise, warp_size=warp_size)
         self.color_points = color_points
         self.axis = axis
 
@@ -571,12 +559,14 @@ class LinearGradient(Shade):
         distance_from_last = abs(last - xy[self.axis])
         from_last_to_next = distance_from_last / (distance_from_next + distance_from_last)
 
-        color = [0, 0, 0]
-        for i in range(3):
-            color_difference = (last_color[i] - next_color[i]) * from_last_to_next
+        color = [0 for i in len(next_color)]
+        for i in range(len(next_color)):
+            color_difference = (
+                last_color[i] - next_color[i]) * from_last_to_next
             color[i] = last_color[i] - color_difference
 
         return color_clamp(color)
+
 
 class VerticalGradient(LinearGradient):
     """
@@ -584,12 +574,14 @@ class VerticalGradient(LinearGradient):
 
     Initialisation parameters:
     color_points (list of pairs): Groups of colours and the y coordinate at which they should appear. Something like: [((255,10,23), 60), ((240, 240, 240), 200), ((0, 255, 0), 500)]
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
-    def __init__(self, color_points, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
-        super().__init__(color_points=color_points, axis=1, transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+
+    def __init__(self, color_points, warp_noise=(NoiseField(), NoiseField()), warp_size=0):
+        super().__init__(color_points=color_points, axis=1,
+                         warp_noise=warp_noise, warp_size=warp_size)
+
 
 class HorizontalGradient(LinearGradient):
     """
@@ -597,12 +589,14 @@ class HorizontalGradient(LinearGradient):
 
     Initialisation parameters:
     color_points (list of pairs): Groups of colours and the x coordinate at which they should appear. Something like: [((255,10,23), 60), ((240, 240, 240), 200), ((0, 255, 0), 500)]
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
-    def __init__(self, color_points, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
-        super().__init__(color_points=color_points, axis=0, transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+
+    def __init__(self, color_points, warp_noise=(NoiseField(), NoiseField()), warp_size=0):
+        super().__init__(color_points=color_points, axis=0,
+                         warp_noise=warp_noise, warp_size=warp_size)
+
 
 class PointGradient(Shade):
     """
@@ -611,16 +605,16 @@ class PointGradient(Shade):
     Initialisation parameters:
     color_points (list of pairs): Groups of colours and the coordinates at which they should appear. Something like: [((255,10,23), (34, 60)), ((240, 240, 240), (100, 200)), ((0, 255, 0), (500,600))]
     axis (int): 0 for horizontal gradient, 1 for vertical
-    transparency (float): How transparent a shade should be. 0 is opaque. 1 is invisible.
     warp_noise (two NoiseField objects): NoiseFields to warp position of marks made.
     warp_size (int): How much warp_noise is allowed to alter the mark in pixels.
     """
-    def __init__(self, color_points, axis=0, transparency=0, warp_noise=(NoiseField(),NoiseField()), warp_size=0):
-        super().__init__(transparency=transparency, warp_noise=warp_noise, warp_size=warp_size)
+
+    def __init__(self, color_points, axis=0, warp_noise=(NoiseField(), NoiseField()), warp_size=0):
+        super().__init__(warp_noise=warp_noise, warp_size=warp_size)
         self.color_points = color_points
         self.axis = axis
 
-    def determine_shade(self,xy):
+    def determine_shade(self, xy):
         """
         Determines shade based on xy coordinates.
 
@@ -631,6 +625,8 @@ class PointGradient(Shade):
         color in form of tuple
         """
         colors = [i[0] for i in self.color_points]
-        weights = [1/(distance_between_points(xy, i[1])+0.0001) for i in self.color_points]
-        color = [np.average([c[i] for c in colors], weights=weights) for i in range(3)]
+        weights = [1/(distance_between_points(xy, i[1])+0.0001)
+                   for i in self.color_points]
+        color = [np.average([c[i] for c in colors], weights=weights)
+                 for i in range(3)]
         return color_clamp(color)

@@ -58,3 +58,23 @@ class NoiseField:
             )
 
 
+def noise_fields(scale=0.02, seed=None, channels=3):
+    """
+    Create multiple NoiseField objects in one go.
+    This is because there are lots of uses where you will need one noise field for each (e.g) axis or color channel
+
+    Parameters:
+    scale (float or iterable of floats): Scale for all noise objects, or one for each
+    seed (int or iterable of ints): Random seed for all noies objects, or one for each
+    channels (int): Number of NoiseFields to return in a list
+
+    Returns:
+    iterable of NoiseFields
+    """
+
+    if not isinstance(scale, list):
+        scale = [scale for i in range(channels)]
+    if not isinstance(seed, list):
+        seed = [seed for i in range(channels)]
+
+    return [NoiseField(scale=scale[i], seed=seed[i]) for i in range(channels)]

@@ -58,8 +58,7 @@ class Shade(ABC):
         (no returns)
         """
         color = self.determine_shade(xy)
-        if self.warp_size != 0:
-            xy = self.adjust_point(xy)
+        xy = self.adjust_point(xy)
 
         if self.in_bounds(canvas, xy):
             canvas.putpixel((int(xy[0]), int(xy[1])), color)
@@ -83,6 +82,7 @@ class Shade(ABC):
 
         (no returns)
         """
+
         color = self.determine_shade(xy)
         if self.warp_size != 0:
             xy = self.adjust_point(xy)

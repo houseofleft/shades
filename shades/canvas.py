@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from random import randint, shuffle
-from utils import *
+from .utils import *
 
 
 def Canvas(height=700, width=700, color=(240, 240, 240), color_mode='RGB'):

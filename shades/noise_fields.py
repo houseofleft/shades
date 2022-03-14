@@ -5,7 +5,6 @@ import numpy as np
 from scipy.interpolate import griddata
 from PIL import Image
 from scipy.ndimage import zoom
-from opensimplex import OpenSimplex
 
 
 class NoiseField:
@@ -71,11 +70,8 @@ class NoiseField:
         Returns:
         float: noise from xy coordinates (between 0 and 1)
         """
-        try:
-            return self.field[xy[0]][xy[1]]
-        except:
-            import pdb
-            pdb.set_trace()
+        noise = self.field[xy[0]][xy[1]]
+        return noise
 
     def recursive_noise(self, xy, depth=1, feedback=0.7):
         """Returns domain warped recursive simplex noise (number between 0 and 1) from xy coordinates.

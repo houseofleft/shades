@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from noise_fields import *
-from utils import *
+from .noise_fields import *
+from .utils import *
 
 
 class Shade(ABC):

@@ -5,7 +5,7 @@ with open("README.md", "r") as file:
 
 setup(
     name='shades',
-    version='0.1.3',
+    version='0.2.0',
     author='Ben Rutter',
     description='A Python module for generative 2d image creation',
     long_description=long_description,

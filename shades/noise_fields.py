@@ -17,12 +17,14 @@ class NoiseField:
     seed (int): intitial seed for noise. Defaults to random generation
     """
 
-    def __init__(self, scale=0, seed=None, limit=1200):
+    def __init__(self, scale=0, seed=None, limit=1200, buffer=500):
         if seed is None:
             np.random.seed(random.randint(0, 9999999))
         else:
             np.random.seed(seed)
         self.scale = scale
+        self.buffer = buffer
+        limit += self.buffer
         if self.scale == 0:
             self.field = np.zeros((limit, limit))
         else:
@@ -70,7 +72,9 @@ class NoiseField:
         Returns:
         float: noise from xy coordinates (between 0 and 1)
         """
-        noise = self.field[xy[0]][xy[1]]
+        # adding buffer to x and y to avoid negative impact
+        xy = (xy[0] + self.buffer, xy[1] + self.buffer)
+        noise = self.field[int(xy[0])][int(xy[1])]
         return noise
 
     def recursive_noise(self, xy, depth=1, feedback=0.7):
@@ -98,7 +102,7 @@ class NoiseField:
             )
 
 
-def noise_fields(scale=0.02, seed=None, channels=3):
+def noise_fields(scale=0.02, seed=None, limit=1000, buffer=500, channels=3):
     """
     Create multiple NoiseField objects in one go.
     This is because there are lots of uses where you will need one noise field for each (e.g) axis or color channel
@@ -117,4 +121,4 @@ def noise_fields(scale=0.02, seed=None, channels=3):
     if not isinstance(seed, list):
         seed = [seed for i in range(channels)]
 
-    return [NoiseField(scale=scale[i], seed=seed[i]) for i in range(channels)]
+    return [NoiseField(scale=scale[i], seed=seed[i], limit=limit, buffer=buffer) for i in range(channels)]

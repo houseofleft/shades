@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pdb
 
 class NoiseField():
     def __init__(self, scale=0.3, size=2, seed=0):
@@ -10,33 +11,60 @@ class NoiseField():
         self.lin = np.linspace(0, size*self.scale, size, endpoint=False)
         x, y = np.meshgrid(self.lin, self.lin)
         self.field = self.perlin_field(x, y, self.seed)
+        self.negative_padding = 0
 
-    def extend_field(self, n, where='right', debug=False):
+    def extend_field(self, n, where='right'):
         # how big are we so far?
         size = max(len(self.field[0]), len(self.field))
         # how big do we need to go?
         new_size = size + n
         # new linear space
-        new_lin = np.linspace(0, new_size*self.scale, new_size, endpoint=False)
+        if where == 'left' or where == 'top':
+            new_lin = np.linspace(
+                (-n*self.scale) - (self.negative_padding * self.scale),
+                (new_size*self.scale)-(n*self.scale) - (self.negative_padding*self.scale),
+                new_size,
+                endpoint=False,
+            )
+            self.negative_padding += n
+        else:
+            new_lin = np.linspace(
+                -(self.negative_padding * self.scale),
+                (new_size*self.scale) - (self.negative_padding*self.scale),
+                new_size,
+                endpoint=False,
+            )
         x, y = np.meshgrid(new_lin, new_lin)
-        try:
-            if where == 'right':
-                # right slice
-                x_length = len(self.field[0])
-                y_length = len(self.field)
-                new_section = self.perlin_field(x[:y_length,x_length:x_length+n], y[:y_length,x_length:x_length+n], self.seed)
-                if debug:
-                    import pdb; pdb.set_trace()
-                self.field = np.concatenate([self.field, new_section], axis=1)
-            elif where == 'bottom':
-                # bottom slice
-                x_length = len(self.field[0])
-                y_length = len(self.field)
-                new_section = self.perlin_field(x[y_length:y_length+n,:x_length], y[y_length:y_length+n,:x_length], self.seed)
-                self.field = np.concatenate([self.field, new_section], axis=0)
-        except Exception as e:
-            print(e)
-            import pdb; pdb.set_trace()
+        if where == 'right':
+            # right slice
+            x_length = len(self.field[0])
+            y_length = len(self.field)
+            new_section = self.perlin_field(x[:y_length,x_length:x_length+n], y[:y_length,x_length:x_length+n], self.seed)
+            self.field = np.concatenate([self.field, new_section], axis=1)
+        elif where == 'bottom':
+            # bottom slice
+            x_length = len(self.field[0])
+            y_length = len(self.field)
+            new_section = self.perlin_field(x[y_length:y_length+n,:x_length], y[y_length:y_length+n,:x_length], self.seed)
+            self.field = np.concatenate([self.field, new_section], axis=0)
+        elif where == 'left':
+            x_length = len(self.field[0])
+            y_length = len(self.field)
+            new_section = self.perlin_field(
+                x[:y_length,:n],
+                y[:y_length,:n],
+                self.seed,
+            )
+            self.field = np.concatenate([new_section, self.field], axis=1)
+        elif where == 'top':
+            x_length = len(self.field[0])
+            y_length = len(self.field)
+            new_section = self.perlin_field(
+                x[:n,:x_length],
+                y[:n,:x_length],
+                self.seed,
+            )
+            self.field = np.concatenate([new_section, self.field], axis=0)
 
 
     def perlin_field(self, x, y, seed=0):
@@ -80,5 +108,19 @@ class NoiseField():
         plt.show()
 
 test = NoiseField()
-test.extend_field(1)
-test.extend_field(4, where='bottom')
+# cool, so I guess now we need a metho t extend BACKWARDS
+# it doesn't really make sense to have a "-4" reference in a grid, BUT
+# we can keep a track of the 'padding' and add that onto all numbers
+# extending the padding when we hit a negative
+# as long as we add on to the grid backwards
+#test.extend_field(1, where='left')
+
+# this is now working except that it isn't
+# the padding stuff works great BUT annoyingly
+# the negative lin space seems to be messing field things
+# and producing huge numbers
+
+# so, how do we avoid that?
+# only way I can think of is by adding some huge number to linspace (so even when paddig, it doesn't become negative, but that seems really stupid since it'll introduce a theorical limit)
+# must be a better way than that?
+# can't think of one immediately

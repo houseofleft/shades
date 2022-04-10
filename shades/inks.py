@@ -186,8 +186,11 @@ class Shade(ABC):
         # we'll temporarily turn off warping as it isn't needed here
         warp_size_keeper = self.warp_size
         self.warp_size = 0
-        [[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
-         for y in range(0, canvas.height)]
+        for x in range(0, canvas.width):
+            for y in range(0, canvas.height):
+                self.point(canvas, (x, y))
+        #[[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
+        # for y in range(0, canvas.height)]
         self.warp_size = warp_size_keeper
 
     def get_shape_edge(self, list_of_points):

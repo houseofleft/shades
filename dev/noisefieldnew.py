@@ -79,7 +79,7 @@ class NoiseField():
             endpoint=False,
         )
         self.field = np.concatenate(
-            [self.perlin_field(self.y_lin, additional_y_lin),
+            [self.perlin_field(self.x_lin, additional_y_lin),
              self.field],
             axis=0,
         )
@@ -135,9 +135,15 @@ class NoiseField():
         if x < 0:
             x_to_backfill = self._roundup(abs(x), self.buffer_chunks)
             self.buffer_field_left(x_to_backfill)
+            x, y = xy
+            x += self.x_negative_buffer
+            y += self.y_negative_buffer
         if y < 0:
             y_to_backfill = self._roundup(abs(y), self.buffer_chunks)
             self.buffer_field_top(y_to_backfill)
+            x, y = xy
+            x += self.x_negative_buffer
+            y += self.y_negative_buffer
         try:
             return self.field[y][x]
         except IndexError:
@@ -147,7 +153,7 @@ class NoiseField():
             y_to_extend = y - height
             if x_to_extend > 0:
                 x_to_extend = self._roundup(x_to_extend, self.buffer_chunks)
-                self.buffer_field_right(x_to_extend)
+                self.buffer_field_left(x_to_extend)
             if y_to_extend > 0:
                 y_to_extend = self._roundup(y_to_extend, self.buffer_chunks)
                 self.buffer_field_bottom(y_to_extend)

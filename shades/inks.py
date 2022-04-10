@@ -186,8 +186,11 @@ class Shade(ABC):
         # we'll temporarily turn off warping as it isn't needed here
         warp_size_keeper = self.warp_size
         self.warp_size = 0
-        [[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
-         for y in range(0, canvas.height)]
+        for x in range(0, canvas.width):
+            for y in range(0, canvas.height):
+                self.point(canvas, (x, y))
+        #[[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
+        # for y in range(0, canvas.height)]
         self.warp_size = warp_size_keeper
 
     def get_shape_edge(self, list_of_points):
@@ -470,7 +473,7 @@ class DomainWarpGradient(Shade):
                 xy, self.depth, self.feedback) - 0.5
             color_affect = noise * (2*self.color_variance)
             return self.color[i] + color_affect
-        return color_clamp([apply_noise(i) for i in range(len(color))])
+        return color_clamp([apply_noise(i) for i in range(len(self.color))])
 
 
 class SwirlOfShades(Shade):

@@ -473,7 +473,7 @@ class DomainWarpGradient(Shade):
                 xy, self.depth, self.feedback) - 0.5
             color_affect = noise * (2*self.color_variance)
             return self.color[i] + color_affect
-        return color_clamp([apply_noise(i) for i in range(len(color))])
+        return color_clamp([apply_noise(i) for i in range(len(self.color))])
 
 
 class SwirlOfShades(Shade):

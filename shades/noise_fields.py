@@ -192,14 +192,10 @@ class NoiseField():
         if depth <= 0:
             return self.noise(xy)
         else:
-            return self.noise(
-                (
-                    (xy[0] * self.scale + self.recursive_noise(xy,
-                     depth - 1, feedback) * (feedback*300)),
-                    (xy[1] * self.scale + self.recursive_noise(xy,
-                     depth - 1, feedback) * (feedback*300))
-                )
-            )
+            # do the noise, of the noise, or something?
+            hm = int(self.noise(xy) * feedback * 100)
+            return self.recursive_noise((hm, hm), depth-1, feedback)
+  
 
 
 def noise_fields(scale=0.02, seed=None, limit=1000, buffer=500, channels=3):

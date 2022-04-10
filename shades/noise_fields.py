@@ -127,7 +127,9 @@ class NoiseField():
         x2 = self.lerp(n01, n11, u)
         # putting the random state back in place
         np.random.set_state(initial_random_state)
-        return self.lerp(x1, x2, v)
+        field = self.lerp(x1, x2, v)
+        field += 0.5
+        return field
 
     def lerp(self, a, b, x):
         "linear interpolation"

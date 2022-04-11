@@ -102,7 +102,7 @@ class NoiseField():
         )
         self.x_lin = np.concatenate([additional_x_lin, self.x_lin])
         self.x_negative_buffer += to_extend
-            
+
 
     def buffer_field_top(self, to_extend: int) -> None:
         """
@@ -227,7 +227,7 @@ class NoiseField():
         ) -> float:
         """Returns domain warped recursive perlin noise
         (number between 0 and 1 from xy coordinates)
-        Recomended feedback around 0-2
+        Recomended feedback (which determines affect of recursive call) around 0-2
         """
         # base case
         if depth <= 0:

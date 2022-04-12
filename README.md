@@ -1,49 +1,28 @@
 # Sh🕶️des
 
+
 ## About
 
 Shades is a python module for generative 2d image creation.
 
-The main abstract object is a 'shade' which will determine color based on rules, and contains methods for drawing on images.
+[Latest version is available via pip install](https://pypi.org/project/shades/)
 
-The majority of these implement simplex noise fields to determine color resulting in images that will appear different each time they are generated.
+[Full reference documentation is available here!](https://shades.readthedocs.io/en/latest/) 🥳
 
-Current existing shades are:
+It might be helpful to read the below guide first as an intro.
 
-* BlockColor
-* HorizontalGradient
-* VerticalGradient
-* PointGradients
-* NoiseGradient
-* DomainWarpGradient
-* SwirlOfShades
 
-All shades have inherit internal methods that can be used for drawing on images.
+## Handy Guide
 
-Current existing methods are:
+The shades module is based around a few key objects:
+* Canvas (basically just a PIL image, with a couple of additions)
+* Shade (determine color based on rules, have methods to draw on canvas)
+* NoiseField (calculates Perlin noise based on xy coords)
 
-* rectangle
-* triangle
-* shape
-* circle
-* pizza_slice
-* fill
-
-## Installing Shades
-
-Shades is pip installable with *python -m pip install shades*
-
-## Using Shades
-
-Shades is designed to help make image creation easier.
-There are three types of objects that get used, they are:
-  - Canvas
-  - NoiseField
-  - Shade
 
 ### Canvas
 
-The *Canvas* object is just a wrapper for a PIL image object.
+The *Canvas* object is just a wrapper for a PIL image object (with some minor functionalities added in like Canvas.random_point() and Canvas.center).
 The idea is that you don't have to import two libraries all the time, but if you'd prefer, you can switch out the *Canvas* call for a PIL image one. This is useful to know as well if you'd like to work between the two modules, or import images/photos to draw on or use with **Shades**.
 
 Here's a simple example using just the *Canvas* object:
@@ -63,12 +42,10 @@ Not too exciting, right? We created a monotone red image that is 100 by 100 pixe
 
 There's not much else you can do with *Canvas*, the idea is just to give us an image *on which we can draw stuff*.
 
-If you call **Canvas()** without any arguments, you'll get a light grey canvas of 700 x 700 pixels.
-
 
 ### NoiseField
 
-*NoiseField* is a pretty handy concept here. A lot of the time with images, we might want an element of randomness, but with a gentler transition. *NoiseField* is the answer to this, as it gives us random gradients between numbers.
+*NoiseField* is a pretty handy concept here. A lot of the time with images, we might want an element of randomness, but with a gentler transition. *NoiseField* is the answer to this, as it gives us random gradients between numbers. [There's more resources online about Perlin noise itself if you're interested- t's a really cool topic](https://en.wikipedia.org/wiki/Perlin_noise)
 
 Here's an example of a simple *NoiseField* use:
 
@@ -83,7 +60,17 @@ In this, *random_number* is the return of the 'noise' call, which takes in coord
 
 When creating a *NoiseField*, the two arguments we can put in are *scale* (which affected how quickly generated numbers will change between points, and 'seed' which is used for generating the semi-random numbers)
 
-**Shades** uses a really cool module called OpenSimplex to do this. If you're interested in finding out more about noise in general, search for *Perlin Noise* and *Simplex Noise* - there really interesting fields, and used a lot in texture generation.
+**Shades** uses numpy to calculate perlin noise, and tries to strike a balance between frontloading noise-fields (so they can be batch calculated with vectorisation) and calculating as it goes (so that you're not waiting ages for something that'll never be used).
+
+One quality of life feature that's worth mentioning is the *noise_fields* function that works as follows:
+
+```python
+import shades
+noise_fields = shades.noise_fields(seed=[4, 4, 9], scale=[0.04, 0.2, 0.002], channels=3)
+more_fields = shades.noise_fields(scale=0.002, channels=2)
+```
+
+This doesn't introduce new functionality, but in a lot of cases (like with working with color, or x/y coordinates) you'll want multiple noise fields (and might want to specify seeds or scales, or leave them blank for defaults), so this is a handy way of doing that without lots of repetitive calls.
 
 
 ### Shade
@@ -117,17 +104,17 @@ import shades
 canvas = shades.Canvas(200, 200)
 gradient = shades.NoiseGradient(
   color=(200, 200, 200),
-  noise_fields=[shades.NoiseField(scale=0.02) for i in range(3)]
+  noise_fields=shades.noise_fields(scale=0.02, channels=3),
 )
 gradient.circle(
   canvas,
-  (canvas.width/2, canvas.height/2),
+  canvas.center,
   radius=50,
 )
 
 canvas.show()
 ```
-(There are three *NoiseField* objects taken by the *noise_field* parameter, one for red, green and blue, using the same *NoiseField* would create a gradient that changes how light/dark the color is without affecting the overall tone)
+(There are three *NoiseField* objects taken by the *noise_field* parameter, one for red, green and blue, using the same *NoiseField* seed for each would create a gradient that changes how light/dark the color is without affecting the overall tone)
 ![A gradient circle](https://github.com/benrutter/Shades/blob/main/images/gradient_circle.png)
 
 Also, all *Shade* objects can be called with 'warp_noise' that will use noise to affect the location of points:
@@ -139,7 +126,7 @@ canvas = shades.Canvas(200, 200)
 warped_shade = shades.BlockColor(
   color=(100, 200, 100),
   warp_size=50,
-  warp_noise=[shades.NoiseField(scale=0.01) for i in range(3)]
+  warp_noise=shades.noise_fields(scale=0.01, channels=3)
 )
 
 warped_shade.line(canvas,(0, 0), (canvas.width, canvas.height))
@@ -180,7 +167,7 @@ canvas.show()
 
 Here's a few examples of some short scripts and the images they create.
 
-**Using SwirlOfShades which will either fill or not based on NoiseField returns**
+**Using SwirlOfShades which will choose another shade based on NoiseField returns**
 ```python
 import shades
 
@@ -207,11 +194,11 @@ canvas = shades.Canvas()
 shade = shades.DomainWarpGradient(
     color=(200,200,200),
     color_variance=70,
-    noise_fields=[shades.NoiseField(scale=0.01) for i in range(3)],
+    noise_fields=shades.noise_fields(scale=0.01, channels=3),
     depth=2,
 )
 
-shade.circle(canvas, (canvas.width/2, canvas.height/2), canvas.width/3)
+shade.circle(canvas, canvas.center, canvas.width/3)
 
 canvas.show()
 ```

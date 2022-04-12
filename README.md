@@ -36,6 +36,7 @@ canvas.show()
 ```
 
 This script will save, and bring up the following image:
+
 ![Red square](https://github.com/benrutter/Shades/blob/main/images/red_canvas.png)
 
 Not too exciting, right? We created a monotone red image that is 100 by 100 pixels. Color is worth taking note, as throughout **Shades** colors are treated and expected to be tuples of the Red, Green and Blue color values (on a scale of 0 to 255). So (200, 0, 0) gives us a red tone.
@@ -95,6 +96,7 @@ This script does a few things:
 - Displays the canvas
 
 This is what the picture will look like:
+
 ![A cyan rectangle](https://github.com/benrutter/Shades/blob/main/images/cyan_rectangle.png)
 
 A lot of *Shade* objects use *NoiseField*, for example, the *NoiseGradient* object which chooses color based on noise responses to (x,y) coordinates. Which we can see here:
@@ -115,6 +117,7 @@ gradient.circle(
 canvas.show()
 ```
 (There are three *NoiseField* objects taken by the *noise_field* parameter, one for red, green and blue, using the same *NoiseField* seed for each would create a gradient that changes how light/dark the color is without affecting the overall tone)
+
 ![A gradient circle](https://github.com/benrutter/Shades/blob/main/images/gradient_circle.png)
 
 Also, all *Shade* objects can be called with 'warp_noise' that will use noise to affect the location of points:
@@ -134,6 +137,7 @@ warped_shade.line(canvas,(0, 0), (canvas.width, canvas.height))
 canvas.show()
 ```
 (the line's location is affected by the two *NoiseField* relating to x and y warping, giving us a wavy green line)
+
 ![A wavy green line](https://github.com/benrutter/Shades/blob/main/images/squiggly_line.png)
 
 

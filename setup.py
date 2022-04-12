@@ -13,4 +13,7 @@ setup(
     url='https://github.com/benrrutter/shades',
     packages=find_packages(),
     python_requires='>=3.6',
+    install_requires=[
+        'numpy>=1.20.0',
+        'Pillow>=8.0.0',
 ) 

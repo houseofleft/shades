@@ -1,22 +1,32 @@
-import numpy as np
-from PIL import Image
+"""
+canvas
+
+contains functions/classes relating to Shades' canvas object
+"""
 from random import randint, shuffle
-from .utils import *
+from typing import List, Callable
+
+import numpy as np
+
+from PIL import Image
+
+from .utils import color_clamp
 
 
-def Canvas(height=700, width=700, color=(240, 240, 240), color_mode='RGB'):
+def Canvas(
+        height: int = 700,
+        width: int = 700,
+        color: List[int] = (240, 240, 240),
+        color_mode: str = 'RGB',
+    ) -> Image:
     """
     Returns an blank image to draw on.
-
-    Parameters:
-    height (int): Height of the image in pixels. Defaults to 700.
-    width (int): Width of the image in pixels. Defaults to 700.
-    color (tuple): Desired RGB of the background. Defaults to 240 mono-grey.
-
-    Returns:
-    PIL Image
+    A function due to PIL library restrictions
+    Although in effect used as class so follows naming conventions
+    for color_mode 'RGB' and 'HSB' supported
+    ('RGBA' and 'HSBA' accepted, but may produce unexpected results)
     """
-    image = Image.new(color_mode, (int(height), int(width)),
+    image = Image.new(color_mode, (int(width), int(height)),
                       color_clamp(color))
     # adding methods or state is pretty restricted by PIL design
     # but a couple of QOL object variables
@@ -29,16 +39,10 @@ def Canvas(height=700, width=700, color=(240, 240, 240), color_mode='RGB'):
     return image
 
 
-def pixel_sort(canvas, key=sum, interval=None):
+def pixel_sort(canvas: Image, key: Callable = sum, interval: int = None) -> Image:
     """
-    Returns sorted version of canvas
-
-    Parameters:
-    canvas (PIL Image)
-    key (function): key to sort pixels by, defaults to sum
-
-    Returns:
-    PIL Image
+    Returns a color sorted version of canvas.
+    Accepts a custom function for sorting color tuples in key
     """
     if interval is None:
         interval = canvas.height * canvas.width
@@ -51,23 +55,25 @@ def pixel_sort(canvas, key=sum, interval=None):
     intervals = np.array_split(pixels, splits)
     intervals = np.array([sorted(i, key=key) for i in intervals])
     pixels = intervals.reshape(
-        canvas.width, canvas.height, len(canvas_array[0][0]))
+        canvas.height,
+        canvas.width,
+        len(canvas_array[0][0]),
+    )
     return Image.fromarray(pixels)
 
 
-def grid_shuffle(canvas, x_grids, y_grids):
+def grid_shuffle(canvas: Image, x_grids: int, y_grids: int):
     """
-    Segments the canvas into a grid, and switches the sections of the grid
-    TODO: lets dummy this function, but getting it to swap to halfs first
+    Returns and image, with grid sections shuffled
     """
     # first off, we need to find some basics like the grid size
     x_size = int(canvas.width / x_grids)
     y_size = int(canvas.height / y_grids)
     # and maybe let's make a list of all the grid corners?
     corners = []
-    for x in range(0, canvas.width - x_size + 1, x_size):
-        for y in range(0, canvas.height - y_size + 1, y_size):
-            corners.append((x, y))
+    for x_coord in range(0, canvas.width - x_size + 1, x_size):
+        for y_coord in range(0, canvas.height - y_size + 1, y_size):
+            corners.append((x_coord, y_coord))
     # now shuffle
     shuffle(corners)
     # now iterate through in pairs swapping pixels
@@ -79,17 +85,13 @@ def grid_shuffle(canvas, x_grids, y_grids):
         except IndexError:
             corner_b = corners[0]
 
-        for x in range(x_size):
-            for y in range(y_size):
-                a_coords = (corner_a[0] + x, corner_a[1] + y)
-                b_coords = (corner_b[0] + x, corner_b[1] + y)
+        for x_coord in range(x_size):
+            for y_coord in range(y_size):
+                a_coords = (corner_a[0] + x_coord, corner_a[1] + y_coord)
+                b_coords = (corner_b[0] + x_coord, corner_b[1] + y_coord)
                 # now swap the pixels
-                try:
-                    a_val = canvas.getpixel(a_coords)
-                    canvas.putpixel(a_coords, canvas.getpixel(b_coords))
-                    canvas.putpixel(b_coords, a_val)
-                except:
-                    import pdb
-                    pdb.set_trace()
+                a_val = canvas.getpixel(a_coords)
+                canvas.putpixel(a_coords, canvas.getpixel(b_coords))
+                canvas.putpixel(b_coords, a_val)
 
     return canvas

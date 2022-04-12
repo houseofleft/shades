@@ -1,23 +1,48 @@
-name: Pylint
+name: Lint and Test
 
 on: [push]
 
 jobs:
-  build:
+
+  lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9"]
+
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: set up python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.x'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pylint
+        pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
         pylint --fail-under=8 shades/
+
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: set up python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: install build
+      run: pip install build
+    - name: build package
+      run: python -m build
+    - name: install package and requirements
+      run: |
+        pip install $(ls dist/*whl)
+        pip install -r requirements.txt
+    - name: unit tests
+      run: |
+        cd tests
+        python -m unittest
+
+    

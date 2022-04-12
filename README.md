@@ -106,7 +106,7 @@ import shades
 canvas = shades.Canvas(200, 200)
 gradient = shades.NoiseGradient(
   color=(200, 200, 200),
-  noise_fields=shades.noise_fields(scale=0.02, channels=3),
+  color_fields=shades.noise_fields(scale=0.02, channels=3),
 )
 gradient.circle(
   canvas,
@@ -116,7 +116,7 @@ gradient.circle(
 
 canvas.show()
 ```
-(There are three *NoiseField* objects taken by the *noise_field* parameter, one for red, green and blue, using the same *NoiseField* seed for each would create a gradient that changes how light/dark the color is without affecting the overall tone)
+(There are three *NoiseField* objects taken by the *color_fields* parameter, one for red, green and blue, using the same *NoiseField* seed for each would create a gradient that changes how light/dark the color is without affecting the overall tone)
 
 ![A gradient circle](https://github.com/benrutter/Shades/blob/main/images/gradient_circle.png)
 
@@ -198,7 +198,7 @@ canvas = shades.Canvas()
 shade = shades.DomainWarpGradient(
     color=(200,200,200),
     color_variance=70,
-    noise_fields=shades.noise_fields(scale=0.01, channels=3),
+    color_fields=shades.noise_fields(scale=0.01, channels=3),
     depth=2,
 )
 
@@ -217,7 +217,7 @@ from scipy.spatial import Delaunay
 
 canvas = shades.Canvas(1000, 800)
 ink = shades.NoiseGradient(
-    noise_fields=[shades.NoiseField(scale=0.002) for i in range(3)]
+    color_fields=[shades.NoiseField(scale=0.002) for i in range(3)]
 )
 
 points = [(randint(0, canvas.width), randint(0, canvas.height)) for i in range(90)]

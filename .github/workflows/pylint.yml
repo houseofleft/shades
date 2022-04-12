@@ -3,17 +3,16 @@ name: Pylint
 on: [push]
 
 jobs:
-  build:
+
+  lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9"]
+
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: set up python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.x'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -21,3 +20,24 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint --fail-under=8 shades/
+
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: set up python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: build package
+      run: python -m build
+    - name: install package
+      run: pip install $(ls dist/*whl)
+    - name: unit tests
+    - run: |
+        cd test
+        python -m unittest
+
+    

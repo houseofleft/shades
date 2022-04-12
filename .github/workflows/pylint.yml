@@ -1,4 +1,4 @@
-name: Pylint
+name: Lint and Test
 
 on: [push]
 
@@ -36,7 +36,7 @@ jobs:
     - name: install package
       run: pip install $(ls dist/*whl)
     - name: unit tests
-    - run: |
+      run: |
         cd test
         python -m unittest
 

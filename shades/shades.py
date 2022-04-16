@@ -57,6 +57,8 @@ class Shade(ABC):
         Determines colour and draws a point on an image.
         """
         color = self.determine_shade(xy_coords)
+        if color is None:
+            return
         xy_coords = self.adjust_point(xy_coords)
 
         if self.in_bounds(canvas, xy_coords):

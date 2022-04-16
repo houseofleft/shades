@@ -225,10 +225,9 @@ class Shade(ABC):
         """
         Draws a rectangle on the image.
         """
-        top_right_corner = (top_corner[0] + width, top_corner[1])
-        bottom_corner = (top_corner[0], top_corner[1] + height)
-        bottom_right_corner = (top_corner[0] + width, top_corner[1] + height)
-        self.shape(canvas, [top_corner, top_right_corner, bottom_corner, bottom_right_corner])
+        for x_coord in range(top_corner[0], top_corner[0] + width):
+            for y_coord in range(top_corner[1], top_corner[1] + height):
+                self.point(canvas, (x_coord, y_coord))
 
     def triangle(
             self,

@@ -159,10 +159,22 @@ class TestShades(unittest.TestCase):
 
     @shade_test
     def test_swirl_of_shades(self):
-        return shades.SwirlOfShades([
-            (0, 0.5, shades.BlockColor()),
-            (0.5, 1, shades.BlockColor()),
-            ])
+        return shades.SwirlOfShades(
+            shades=[
+                (0, 0.5, shades.BlockColor((0, 0, 0))),
+                (0.5, 1, shades.BlockColor((250,250,250))),
+            ],
+            swirl_field=shades.NoiseField(scale=0.05),
+        )
+
+    @marks_canvas_test
+    def test_swirl_of_shades_doesnt_create_error_for_none_regions(self):
+        return shades.SwirlOfShades(
+            shades=[
+                (0.4, 0.6, shades.BlockColor()),
+            ],
+            swirl_field=shades.NoiseField(scale=0.01),
+        )
 
     @shade_test
     def test_linear_gradient(self):

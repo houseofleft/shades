@@ -238,7 +238,7 @@ class Shade(ABC):
         """
         Draws a square on the canvas
         """
-        self.rectangle(self, canvas, top_corner, size, size)
+        self.rectangle(canvas, top_corner, size, size)
 
 
     def triangle(

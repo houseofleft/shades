@@ -229,6 +229,18 @@ class Shade(ABC):
             for y_coord in range(top_corner[1], top_corner[1] + height):
                 self.point(canvas, (x_coord, y_coord))
 
+    def square(
+            self,
+            canvas: Image,
+            top_corner: Tuple[int, int],
+            size: int,
+        ) -> None:
+        """
+        Draws a square on the canvas
+        """
+        self.rectangle(self, canvas, top_corner, size, size)
+
+
     def triangle(
             self,
             canvas,

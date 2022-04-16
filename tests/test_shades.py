@@ -122,6 +122,10 @@ class TestShades(unittest.TestCase):
 
 
     @marks_canvas_test
+    def test_square(self):
+        self.shade.square(self.canvas, (0, 0), 10)
+
+    @marks_canvas_test
     def test_triangle(self):
         self.shade.triangle(self.canvas, (0, 0), (10, 10), (0, 10))
 

@@ -227,7 +227,7 @@ class Shade(ABC):
         """
         for x_coord in range(top_corner[0], top_corner[0] + width):
             for y_coord in range(top_corner[1], top_corner[1] + height):
-                self.point(canvas, (x_coord, y_coord))
+                self.weighted_point(canvas, (x_coord, y_coord), 2)
 
     def square(
             self,

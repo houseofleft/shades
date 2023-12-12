@@ -15,6 +15,7 @@ from .utils import color_clamp
 
 def dummy_test_shade(xy: Tuple[int, int], width: int, height: int) -> np.ndarray:
     """
+    Just returns a random color based filling out array
     """
     random_color = [random.ranint(0, 255) for i in range(3)]
     return np.full(

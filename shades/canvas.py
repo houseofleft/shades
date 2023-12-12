@@ -4,7 +4,8 @@ canvas
 contains functions/classes relating to Shades' canvas object
 """
 from random import randint, shuffle
-from typing import List, Callable
+from typing import List, Callable, Tuple
+from enum import Enum
 
 import numpy as np
 
@@ -12,86 +13,64 @@ from PIL import Image
 
 from .utils import color_clamp
 
+def dummy_test_shade(xy: Tuple[int, int], width: int, height: int) -> np.ndarray:
+    """
+    """
+    random_color = [random.ranint(0, 255) for i in range(3)]
+    return np.full(
+        (height, width, 3),
+        random_color,
+        dtype=float,
+    )
 
-def Canvas(
-        height: int = 700,
+class ColorMode(Enum):
+    """
+    Enum for supported color modes.
+    """
+    RGB = "RGB"
+    HSL = "HSL"
+
+class Canvas:
+    """
+    Shades central Canvas object.
+
+    Draws image on self (will help of a shade function)
+    and contains methods for displaying / saving etc.
+    """
+
+    def __init__(
+        self,
         width: int = 700,
-        color: List[int] = (240, 240, 240),
-        color_mode: str = 'RGB',
-    ) -> Image:
-    """
-    Returns an blank image to draw on.
-    A function due to PIL library restrictions
-    Although in effect used as class so follows naming conventions
-    for color_mode 'RGB' and 'HSB' supported
-    ('RGBA' and 'HSBA' accepted, but may produce unexpected results)
-    """
-    image = Image.new(color_mode, (int(width), int(height)),
-                      color_clamp(color))
-    # adding methods or state is pretty restricted by PIL design
-    # but a couple of QOL object variables
-    image.x_center = int(image.width/2)
-    image.y_center = int(image.height/2)
-    image.center = (image.x_center, image.y_center)
-    image.random_point = lambda: (
-        randint(0, image.width), randint(0, image.height)
-    )
-    return image
-
-
-def pixel_sort(canvas: Image, key: Callable = sum, interval: int = None) -> Image:
-    """
-    Returns a color sorted version of canvas.
-    Accepts a custom function for sorting color tuples in key
-    """
-    if interval is None:
-        interval = canvas.height * canvas.width
-    canvas_array = np.array(canvas)
-    pixels = canvas_array.reshape(
-        canvas.width * canvas.height,
-        len(canvas_array[0][0])
+        height: int = 700,
+        color: Tuple[int] = (240, 240, 240),
+    ) -> None:
+        """
+        Initialise a Canvas object
+        """
+        self._image_array: np.ndarray = np.full(
+            (height, width, 3),
+            color,
+            dtype=float,
         )
-    splits = int(len(pixels) / interval)
-    intervals = np.array_split(pixels, splits)
-    intervals = np.array([sorted(i, key=key) for i in intervals])
-    pixels = intervals.reshape(
-        canvas.height,
-        canvas.width,
-        len(canvas_array[0][0]),
-    )
-    return Image.fromarray(pixels)
+        self.width: int = width
+        self.height: int = height
+        self.x_center: int = int(self.width/2)
+        self.y_center: int = int(self.height/2)
+        self.center: Tuple[int, int] = (self.x_center, self.y_center)
 
 
-def grid_shuffle(canvas: Image, x_grids: int, y_grids: int):
-    """
-    Returns and image, with grid sections shuffled
-    """
-    # first off, we need to find some basics like the grid size
-    x_size = int(canvas.width / x_grids)
-    y_size = int(canvas.height / y_grids)
-    # and maybe let's make a list of all the grid corners?
-    corners = []
-    for x_coord in range(0, canvas.width - x_size + 1, x_size):
-        for y_coord in range(0, canvas.height - y_size + 1, y_size):
-            corners.append((x_coord, y_coord))
-    # now shuffle
-    shuffle(corners)
-    # now iterate through in pairs swapping pixels
-    # at the moment the below will error if there's an odd number
-    for i in range(0, len(corners), 2):
-        corner_a = corners[i]
-        try:
-            corner_b = corners[i+1]
-        except IndexError:
-            corner_b = corners[0]
+    def _render_item(fills: np.ndarray, shade: Callable):
+        """
+        Render single item.
+        
+        Fills should be height/width shaped array of 0s and 1s.
 
-        for x_coord in range(x_size):
-            for y_coord in range(y_size):
-                a_coords = (corner_a[0] + x_coord, corner_a[1] + y_coord)
-                b_coords = (corner_b[0] + x_coord, corner_b[1] + y_coord)
-                # now swap the pixels
-                a_val = canvas.getpixel(a_coords)
-                canvas.putpixel(a_coords, canvas.getpixel(b_coords))
-                canvas.putpixel(b_coords, a_val)
+        1 being "yes shade in", and 0 being "no thanks!"
+        """
+        raise NotImplementedError
 
-    return canvas
+    def _render_stack(list):
+        """
+        Render all items on the stack
+        """
+        raise NotImplementedError

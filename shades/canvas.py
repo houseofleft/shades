@@ -9,21 +9,6 @@ from enum import Enum
 from PIL import Image
 import numpy as np
 
-def block_color(color: Tuple[int, int, int]) -> Callable:
-    """
-    Creates a shade that shades everything with a block color
-    """
-    def shade(xy: Tuple[int, int], width: int, height: int) -> np.ndarray:
-        """
-        shade everythinga block color
-        """
-        return np.full(
-            (height, width, 3),
-            color,
-            dtype=float,
-        )
-    return shade
-
 class ColorMode(Enum):
     """
     Enum for supported color modes.
@@ -134,17 +119,3 @@ class Canvas:
         Size relates to the height or width (they are the same).
         """
         return self.rectangle(shade, xy, size, size)
-
-
-if __name__ == "__main__":
-    cool = Canvas(mode=ColorMode.LAB)
-    one = block_color((20, 20, 240))
-    two = block_color((200, 100, 0))
-    (Canvas()
-        .rectangle(one, cool.center, 200, 200)
-        .rectangle(two, (0, 0), 100, 300)
-        .rectangle(one, (10, 10), 10, 400)
-        .square(one, (30, 40), 300)
-        .rectangle(two, (600, 400), 100, 100)
-        .show()
-    )

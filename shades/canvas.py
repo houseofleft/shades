@@ -136,3 +136,15 @@ class Canvas:
         return self
 
 
+    def polygon(self, points: List[Tuple[int, int], ...]) -> "Canvas":
+        """
+        This will be a little tricky to implement, but should really open stuff up.`
+
+        Steps (I think) should be:
+        1. figure out the lines between all points so that we can get all the edges
+        2. iterate (sigh, maybe we can avoid this somehow?) across the x axis
+        3. for each axis, we just want the edge points on that axis*
+        4. then it should be simply, fill ones between the 1st and 2nd, the 3rd and 4th, etc. (i.e. ray casting)
+        """
+        raise NotImplementedError
+        

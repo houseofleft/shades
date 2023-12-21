@@ -119,3 +119,20 @@ class Canvas:
         Size relates to the height or width (they are the same).
         """
         return self.rectangle(shade, xy, size, size)
+
+    def line(self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], weight=1) -> "Canvas":
+        """
+        Draw a line on the canvas using the given shade.
+        """
+        array: np.ndarray = np.zeros((self.height, self.width))
+        slope = (end[1] - start[1]) / (end[0] - start[0])
+        intercept = start[1] - slope * start[0]
+        y_start = min(start[1], end[1])
+        y_end = max(start[1], end[1])
+        for y in range(y_start, y_end):
+            x = int(round(slope * y + intercept))
+            array[y, x:x+weight] = 1
+        self._stack.append((shade, array))
+        return self
+
+

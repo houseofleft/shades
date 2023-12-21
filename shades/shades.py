@@ -71,7 +71,7 @@ def custom_shade(custom_function: Callable[Tuple[int, int], Tuple[int, int, int]
         colors = np.array()
         for x in range(xy[0], xy[0]+height):
             row = np.array()
-            for x in range(xy[1]):
+            for y in range(xy[1]):
                 np.append(row, custom_function((x, y)))
             np.append(colors, row)
         return colors

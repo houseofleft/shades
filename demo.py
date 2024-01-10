@@ -11,6 +11,7 @@ if __name__ == "__main__":
         .square(one, (30, 40), 300)
         .rectangle(two, (600, 400), 100, 100)
         .line(one, (0, 0), (500, 500), 10)
+        .polygon(two, (40, 50), (234, 35), (400, 400))
         .show()
     )
     

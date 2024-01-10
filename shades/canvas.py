@@ -3,8 +3,9 @@ canvas
 
 contains functions/classes relating to Shades' canvas object
 """
-from typing import Callable, Tuple, List, Optional
+from typing import Callable, Tuple, List, Optional, Generator, DefaultDict
 from enum import Enum
+from collections import defaultdict
 
 from PIL import Image
 import numpy as np
@@ -125,26 +126,44 @@ class Canvas:
         Draw a line on the canvas using the given shade.
         """
         array: np.ndarray = np.zeros((self.height, self.width))
-        slope = (end[1] - start[1]) / (end[0] - start[0])
-        intercept = start[1] - slope * start[0]
-        y_start = min(start[1], end[1])
-        y_end = max(start[1], end[1])
-        for y in range(y_start, y_end):
-            x = int(round(slope * y + intercept))
+        for x, y in self._points_in_line(start, end):
             array[y, x:x+weight] = 1
         self._stack.append((shade, array))
         return self
 
-
-    def polygon(self, points: List[Tuple[int, int], ...]) -> "Canvas":
+    def _points_in_line(self, start: Tuple[int, int], end: Tuple[int, int]) -> Generator[Tuple[int, int], None, None]:
         """
-        This will be a little tricky to implement, but should really open stuff up.`
-
-        Steps (I think) should be:
-        1. figure out the lines between all points so that we can get all the edges
-        2. iterate (sigh, maybe we can avoid this somehow?) across the x axis
-        3. for each axis, we just want the edge points on that axis*
-        4. then it should be simply, fill ones between the 1st and 2nd, the 3rd and 4th, etc. (i.e. ray casting)
+        Get the points in a line, iterating across the y axis
         """
-        raise NotImplementedError
+        slope = (end[1] - start[1]) / (end[0] - start[0])
+        intercept = start[1] - slope * start[0]
+        y_start = min(start[1], end[1])
+        y_end = max(start[1], end[1])
+        points = []
+        for y in range(y_start, y_end):
+            x = int(round(slope * y + intercept))
+            yield (x, y)
+
+    def polygon(self, shade: Callable, *points: Tuple[int, int]) -> "Canvas":
+        """
+        Draw a polygon on canvas with the given shade.
+
+        Uses ray tracing to determin points within shape, based on matching
+        between first points, to second, to third (etc) to first.
+        """
+        pairs = [
+            (point, points[(i + 1) % len(points)])
+            for i, point in enumerate(points)
+        ]
+        y_to_x_points: DefaultDict[int, List[int]] = defaultdict(lambda: [])
+        for pair in pairs:
+            for line_point in self._points_in_line(*pair):
+                y_to_x_points[line_point[1]].append(line_point[0])
+        array: np.ndarray = np.zeros((self.height, self.width))
+        for y in y_to_x_points:
+            xs = y_to_x_points[y]
+            for start_x, end_x in zip(xs[::2], xs[1::2]):
+                array[y, start_x:end_x] = 1
+        self._stack.append((shade, array))
+        return self
         

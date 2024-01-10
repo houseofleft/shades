@@ -14,5 +14,10 @@ dependencies = [
   "Pillow>=8.0.0",
 ]
 
+[tool]
+rye = { dev-dependencies = [
+    "ipdb>=0.13.13",
+] }
+
 [tool.hatch.version]
 path = "shades/__init__.py"

@@ -99,7 +99,7 @@ class Canvas:
         """
         self.image().save(path, format=format, **kwargs)
 
-    def rectangle(self, shade: Callable, xy: Tuple[int, int], width: int, height: int) -> "Canvas":
+    def rectangle(self, shade: Callable, xy: Tuple[int, int], width: int, height: int, rotation: int = 0) -> "Canvas":
         """
         Draw a rectangle on the canvas using the given shade.
 
@@ -108,10 +108,12 @@ class Canvas:
         x, y = xy
         array: np.ndarray = np.zeros((self.height, self.width))
         array[y:y+height, x:x+width] = 1
+        if rotation != 0:
+            array = self.rotate(array, xy, rotation)
         self._stack.append((shade, array))
         return self
 
-    def square(self, shade: Callable, xy: Tuple[int, int], size: int) -> "Canvas":
+    def square(self, shade: Callable, xy: Tuple[int, int], size: int, rotation: int = 0) -> "Canvas":
         """
         Draw a square on the canvas using the given shade.
 
@@ -119,7 +121,7 @@ class Canvas:
 
         Size relates to the height or width (they are the same).
         """
-        return self.rectangle(shade, xy, size, size)
+        return self.rectangle(shade, xy, size, size, rotation)
 
     def line(self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], weight=1) -> "Canvas":
         """
@@ -143,7 +145,7 @@ class Canvas:
             x = int(round(slope * y + intercept))
             yield (x, y)
 
-    def polygon(self, shade: Callable, *points: Tuple[int, int]) -> "Canvas":
+    def polygon(self, shade: Callable, *points: Tuple[int, int], rotation: int = 0) -> "Canvas":
         """
         Draw a polygon on canvas with the given shade.
 
@@ -163,6 +165,8 @@ class Canvas:
             xs = y_to_x_points[y]
             for start_x, end_x in zip(xs[::2], xs[1::2]):
                 array[y, start_x:end_x] = 1
+        if rotation != 0:
+            array = self.rotate(array, points[0], rotation)
         self._stack.append((shade, array))
         return self
 
@@ -177,3 +181,17 @@ class Canvas:
         self._stack.append((shade, array))
         return self
         
+    def rotate(self, array: np.ndarray, center: Tuple[int, int], degrees: int) -> np.ndarray:
+        radians = np.radians(degrees)
+        y_center, x_center = center
+        y_size, x_size = array.shape
+        i, j = np.ogrid[:y_size, :x_size]
+        i_rotated = np.cos(radians) * (i - y_center) - np.sin(radians) * (j - x_center) + y_center
+        j_rotated = np.sin(radians) * (i - y_center) + np.cos(radians) * (j - x_center) + x_center
+        i_rotated = np.round(i_rotated).astype(int)
+        j_rotated = np.round(j_rotated).astype(int)
+        rotated_grid = np.zeros_like(array)
+        mask = (i_rotated >= 0) & (i_rotated < y_size) & (j_rotated >= 0) & (j_rotated < x_size)
+        rotated_grid[mask] = array[i_rotated[mask], j_rotated[mask]]
+
+        return rotated_grid

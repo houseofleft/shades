@@ -25,9 +25,9 @@ def distance_between_points(xy1: Tuple[int, int], xy2: Tuple[int, int]) -> float
 
 
 def randomly_shift_point(
-        xy_coords: Tuple[int, int],
-        movement_range: Union[Tuple[int, int], Tuple[Tuple[int, int], Tuple[int, int]]],
-    ) -> Tuple[int, int]:
+    xy_coords: Tuple[int, int],
+    movement_range: Union[Tuple[int, int], Tuple[Tuple[int, int], Tuple[int, int]]],
+) -> Tuple[int, int]:
     """
     Randomly shifts a point within defined range
 
@@ -43,8 +43,7 @@ def randomly_shift_point(
         movement_range = [movement_range, movement_range]
 
     shifted_xy = [
-        xy_coords[i] +
-        randint(movement_range[i][0], movement_range[i][1])
+        xy_coords[i] + randint(movement_range[i][0], movement_range[i][1])
         for i in range(2)
     ]
     return tuple(shifted_xy)

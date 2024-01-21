@@ -27,11 +27,11 @@ class Shade(ABC):
     """
 
     def __init__(
-            self,
-            color: Tuple[int, int, int] = (0, 0, 0),
-            warp_noise: Tuple[NoiseField] = noise_fields(channels=2),
-            warp_size: float = 0,
-        ):
+        self,
+        color: Tuple[int, int, int] = (0, 0, 0),
+        warp_noise: Tuple[NoiseField] = noise_fields(channels=2),
+        warp_size: float = 0,
+    ):
         self.color = color
         self.warp_noise = warp_noise
         self.warp_size = warp_size
@@ -64,7 +64,6 @@ class Shade(ABC):
         if self.in_bounds(canvas, xy_coords):
             canvas.putpixel((int(xy_coords[0]), int(xy_coords[1])), color)
 
-
     def in_bounds(self, canvas: Image, xy_coords: Tuple[int, int]) -> bool:
         """
         determined whether xy_coords are within the size of canvas image
@@ -74,7 +73,6 @@ class Shade(ABC):
         if (xy_coords[1] < 0) or (xy_coords[1] >= canvas.height):
             return False
         return True
-
 
     def weighted_point(self, canvas: Image, xy_coords: Tuple[int, int], weight: int):
         """
@@ -86,10 +84,9 @@ class Shade(ABC):
 
         for x_coord in range(0, weight):
             for y_coord in range(0, weight):
-                new_point = (int(xy_coords[0]+x_coord), int(xy_coords[1]+y_coord))
+                new_point = (int(xy_coords[0] + x_coord), int(xy_coords[1] + y_coord))
                 if self.in_bounds(canvas, new_point):
                     canvas.putpixel(new_point, color)
-
 
     def pixels_inside_edge(self, edge_pixels: List) -> List:
         """
@@ -100,18 +97,17 @@ class Shade(ABC):
         """
         inner_pixels = []
         x_coords = {i[0] for i in edge_pixels}
-        for x_coord in range(min(x_coords), max(x_coords)+1):
+        for x_coord in range(min(x_coords), max(x_coords) + 1):
             y_coords = {i[1] for i in edge_pixels if i[0] == x_coord}
-            y_coords = [i for i in y_coords if i-1 not in y_coords]
+            y_coords = [i for i in y_coords if i - 1 not in y_coords]
             ray_count = 0
-            for y_coord in range(min(y_coords), max(y_coords)+1):
+            for y_coord in range(min(y_coords), max(y_coords) + 1):
                 if y_coord in y_coords and (x_coord, y_coord):
                     ray_count += 1
                 if ray_count % 2 == 1:
                     inner_pixels.append((x_coord, y_coord))
 
         return list(set(inner_pixels + edge_pixels))
-
 
     def pixels_between_two_points(self, xy_coord_1: Tuple, xy_coord_2: Tuple) -> List:
         """
@@ -129,7 +125,9 @@ class Shade(ABC):
                 x_step = -1
             else:
                 x_step = 1
-            y_step = (abs(xy_coord_1[1] - xy_coord_2[1]) / abs(xy_coord_1[0] - xy_coord_2[0]))
+            y_step = abs(xy_coord_1[1] - xy_coord_2[1]) / abs(
+                xy_coord_1[0] - xy_coord_2[0]
+            )
             if xy_coord_1[1] > xy_coord_2[1]:
                 y_step *= -1
             i_stop = abs(xy_coord_1[0] - xy_coord_2[0])
@@ -138,10 +136,12 @@ class Shade(ABC):
                 y_step = -1
             else:
                 y_step = 1
-            x_step = (abs(xy_coord_1[0] - xy_coord_2[0]) / abs(xy_coord_1[1] - xy_coord_2[1]))
+            x_step = abs(xy_coord_1[0] - xy_coord_2[0]) / abs(
+                xy_coord_1[1] - xy_coord_2[1]
+            )
             if xy_coord_1[0] > xy_coord_2[0]:
                 x_step *= -1
-            i_stop = abs(xy_coord_1[1]-xy_coord_2[1])
+            i_stop = abs(xy_coord_1[1] - xy_coord_2[1])
 
         pixels = []
         x_coord, y_coord = xy_coord_1
@@ -151,20 +151,18 @@ class Shade(ABC):
             y_coord += y_step
         return pixels
 
-
     def line(
-            self,
-            canvas: Image,
-            xy_coords_1: Tuple[int, int],
-            xy_coords_2: Tuple[int, int],
-            weight: int = 2,
-        ) -> None:
+        self,
+        canvas: Image,
+        xy_coords_1: Tuple[int, int],
+        xy_coords_2: Tuple[int, int],
+        weight: int = 2,
+    ) -> None:
         """
         Draws a weighted line on the image.
         """
         for pixel in self.pixels_between_two_points(xy_coords_1, xy_coords_2):
             self.weighted_point(canvas, pixel, weight)
-
 
     def fill(self, canvas: Image) -> None:
         """
@@ -176,22 +174,20 @@ class Shade(ABC):
         for x_coord in range(0, canvas.width):
             for y_coord in range(0, canvas.height):
                 self.point(canvas, (x_coord, y_coord))
-        #[[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
+        # [[self.point(canvas, (x, y)) for x in range(0, canvas.width)]
         # for y in range(0, canvas.height)]
         self.warp_size = warp_size_keeper
-
 
     def get_shape_edge(self, list_of_points: List[Tuple[int, int]]) -> List[Tuple]:
         """
         Returns list of coordinates making up the edge of a shape
         """
-        edge = self.pixels_between_two_points(
-            list_of_points[-1], list_of_points[0])
-        for i in range(0, len(list_of_points)-1):
+        edge = self.pixels_between_two_points(list_of_points[-1], list_of_points[0])
+        for i in range(0, len(list_of_points) - 1):
             edge += self.pixels_between_two_points(
-                list_of_points[i], list_of_points[i+1])
+                list_of_points[i], list_of_points[i + 1]
+            )
         return edge
-
 
     def shape(self, canvas: Image, points: List[Tuple[int, int]]) -> None:
         """
@@ -201,27 +197,25 @@ class Shade(ABC):
         for pixel in self.pixels_inside_edge(edge):
             self.point(canvas, pixel)
 
-
     def shape_outline(
-            self,
-            canvas: Image,
-            points: List[Tuple[int, int]],
-            weight: int = 2,
-        ) -> None:
+        self,
+        canvas: Image,
+        points: List[Tuple[int, int]],
+        weight: int = 2,
+    ) -> None:
         """
         Draws a shape outline on an image based on a list of points.
         """
         for pixel in self.get_shape_edge(points):
             self.weighted_point(canvas, pixel, weight)
 
-
     def rectangle(
-            self,
-            canvas: Image,
-            top_corner: Tuple[int, int],
-            width: int,
-            height: int,
-        ) -> None:
+        self,
+        canvas: Image,
+        top_corner: Tuple[int, int],
+        width: int,
+        height: int,
+    ) -> None:
         """
         Draws a rectangle on the image.
         """
@@ -230,71 +224,67 @@ class Shade(ABC):
                 self.point(canvas, (x_coord, y_coord))
 
     def square(
-            self,
-            canvas: Image,
-            top_corner: Tuple[int, int],
-            size: int,
-        ) -> None:
+        self,
+        canvas: Image,
+        top_corner: Tuple[int, int],
+        size: int,
+    ) -> None:
         """
         Draws a square on the canvas
         """
         self.rectangle(canvas, top_corner, size, size)
 
-
     def triangle(
-            self,
-            canvas,
-            xy1: Tuple[int, int],
-            xy2: Tuple[int, int],
-            xy3: Tuple[int, int],
-        ) -> None:
+        self,
+        canvas,
+        xy1: Tuple[int, int],
+        xy2: Tuple[int, int],
+        xy3: Tuple[int, int],
+    ) -> None:
         """
         Draws a triangle on the image.
         This is the same as calling Shade.shape with a list of three points.
         """
         self.shape(canvas, [xy1, xy2, xy3])
 
-
     def triangle_outline(
-            self,
-            canvas,
-            xy1: Tuple[int, int],
-            xy2: Tuple[int, int],
-            xy3: Tuple[int, int],
-            weight: int = 2,
-        ) -> None:
+        self,
+        canvas,
+        xy1: Tuple[int, int],
+        xy2: Tuple[int, int],
+        xy3: Tuple[int, int],
+        weight: int = 2,
+    ) -> None:
         """
         Draws a triangle outline on the image.
         Note that this is the same as calling Shade.shape_outline with a list of three points.
         """
         self.shape_outline(canvas, [xy1, xy2, xy3], weight)
 
-
     def get_circle_edge(
-            self,
-            center: Tuple[int, int],
-            radius: int,
-        ) -> List[Tuple[int, int]]:
+        self,
+        center: Tuple[int, int],
+        radius: int,
+    ) -> List[Tuple[int, int]]:
         """
         Returns the edge coordinates of a circle
         """
         edge_pixels = []
         circumference = radius * 2 * np.pi
-        for i in range(0, int(circumference)+1):
-            angle = (i/circumference) * 360
+        for i in range(0, int(circumference) + 1):
+            angle = (i / circumference) * 360
             opposite = np.sin(np.radians(angle)) * radius
             adjacent = np.cos(np.radians(angle)) * radius
             point = (int(center[0] + adjacent), int(center[1] + opposite))
             edge_pixels.append(point)
         return edge_pixels
 
-
     def circle(
-            self,
-            canvas: Image,
-            center: Tuple[int, int],
-            radius: int,
-        ) -> None:
+        self,
+        canvas: Image,
+        center: Tuple[int, int],
+        radius: int,
+    ) -> None:
         """
         Draws a circle on the image.
         """
@@ -302,14 +292,13 @@ class Shade(ABC):
         for pixel in self.pixels_inside_edge(edge_pixels):
             self.point(canvas, pixel)
 
-
     def circle_outline(
-            self,
-            canvas: Image,
-            center: Tuple[int, int],
-            radius: int,
-            weight: int = 2,
-        ) -> None:
+        self,
+        canvas: Image,
+        center: Tuple[int, int],
+        radius: int,
+        weight: int = 2,
+    ) -> None:
         """
         Draws a circle outline on the image.
         """
@@ -317,15 +306,14 @@ class Shade(ABC):
         for pixel in edge_pixels:
             self.weighted_point(canvas, pixel, weight)
 
-
     def circle_slice(
-            self,
-            canvas: Image,
-            center: Tuple[int, int],
-            radius: int,
-            start_angle: int,
-            degrees_of_slice: int,
-        ) -> None:
+        self,
+        canvas: Image,
+        center: Tuple[int, int],
+        radius: int,
+        start_angle: int,
+        degrees_of_slice: int,
+    ) -> None:
         """
         Draws a partial circle based on degrees.
         (will have the appearance of a 'pizza slice' or 'pacman' depending on degrees).
@@ -335,14 +323,13 @@ class Shade(ABC):
         def _internal(canvas, center, radius, start_angle, degrees_of_slice):
             circumference = radius * 2 * np.pi
 
-            start_point = int(
-                (((start_angle - 90) % 361) / 360) * circumference)
+            start_point = int((((start_angle - 90) % 361) / 360) * circumference)
             slice_length = int((degrees_of_slice / 360) * circumference)
             end_point = start_point + slice_length
             edge_pixels = []
 
             for i in range(start_point, end_point + 1):
-                angle = (i/circumference) * 360
+                angle = (i / circumference) * 360
                 opposite = np.sin(np.radians(angle)) * radius
                 adjacent = np.cos(np.radians(angle)) * radius
                 point = (int(center[0] + adjacent), int(center[1] + opposite))
@@ -355,8 +342,7 @@ class Shade(ABC):
 
         if degrees_of_slice > 180:
             _internal(canvas, center, radius, start_angle, 180)
-            _internal(canvas, center, radius, start_angle +
-                      180, degrees_of_slice - 180)
+            _internal(canvas, center, radius, start_angle + 180, degrees_of_slice - 180)
         else:
             _internal(canvas, center, radius, start_angle, degrees_of_slice)
 
@@ -365,6 +351,7 @@ class BlockColor(Shade):
     """
     Type of shade that will always fill with defined color without variation.
     """
+
     def determine_shade(self, xy_coords: Tuple[int, int]) -> Tuple[int, int, int]:
         """
         Ignores xy coordinates and returns defined color.
@@ -382,26 +369,31 @@ class NoiseGradient(Shade):
     """
 
     def __init__(
-            self,
-            color: Tuple[int, int, int] = (0, 0, 0),
-            warp_noise: Tuple[NoiseField, NoiseField, NoiseField] = noise_fields(channels=3),
-            warp_size: int = 0,
-            color_variance: int = 70,
-            color_fields: Tuple[NoiseField, NoiseField, NoiseField] = noise_fields(channels=3),
-        ):
+        self,
+        color: Tuple[int, int, int] = (0, 0, 0),
+        warp_noise: Tuple[NoiseField, NoiseField, NoiseField] = noise_fields(
+            channels=3
+        ),
+        warp_size: int = 0,
+        color_variance: int = 70,
+        color_fields: Tuple[NoiseField, NoiseField, NoiseField] = noise_fields(
+            channels=3
+        ),
+    ):
         super().__init__(color, warp_noise, warp_size)
         self.color_variance = color_variance
         self.color_fields = tuple(color_fields)
-
 
     def determine_shade(self, xy_coords: Tuple[int, int]) -> Tuple[int, int, int]:
         """
         Measures noise from coordinates and affects color based upon return.
         """
+
         def apply_noise(i):
             noise = self.color_fields[i].noise(xy_coords) - 0.5
-            color_affect = noise * (2*self.color_variance)
+            color_affect = noise * (2 * self.color_variance)
             return self.color[i] + color_affect
+
         return color_clamp([apply_noise(i) for i in range(len(self.color))])
 
 
@@ -417,31 +409,38 @@ class DomainWarpGradient(Shade):
     """
 
     def __init__(
-            self,
-            color: Tuple[int, int, int] = (0, 0, 0),
-            warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
-            warp_size: int = 0,
-            color_variance: int = 70,
-            color_fields: Tuple[NoiseField, NoiseField, NoiseField] = noise_fields(channels=3),
-            depth: int = 2,
-            feedback: float = 0.7,
-        ):
+        self,
+        color: Tuple[int, int, int] = (0, 0, 0),
+        warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
+        warp_size: int = 0,
+        color_variance: int = 70,
+        color_fields: Tuple[NoiseField, NoiseField, NoiseField] = noise_fields(
+            channels=3
+        ),
+        depth: int = 2,
+        feedback: float = 0.7,
+    ):
         super().__init__(color, warp_noise, warp_size)
         self.color_variance = color_variance
         self.color_fields = tuple(color_fields)
         self.depth = depth
         self.feedback = feedback
 
-
     def determine_shade(self, xy_coords: Tuple[int, int]) -> Tuple[int, int, int]:
         """
         Determines shade based on xy coordinates.
         """
+
         def apply_noise(i):
-            noise = self.color_fields[i].recursive_noise(
-                xy_coords, self.depth, self.feedback) - 0.5
-            color_affect = noise * (2*self.color_variance)
+            noise = (
+                self.color_fields[i].recursive_noise(
+                    xy_coords, self.depth, self.feedback
+                )
+                - 0.5
+            )
+            color_affect = noise * (2 * self.color_variance)
             return self.color[i] + color_affect
+
         return color_clamp([apply_noise(i) for i in range(len(self.color))])
 
 
@@ -461,23 +460,23 @@ class SwirlOfShades(Shade):
     The below will color white when noise of 0 - 0.5 is returned, and black if noise of 0.5 - 1
     [(0, 0.5, shades.BlockColor((255, 255, 255)), (0.5, 1, shades.BlockColor((0, 0, 0)))]
     """
+
     def __init__(
-            self,
-            shades: List[Tuple[float, float, Shade]],
-            warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
-            warp_size: int = 0,
-            color_variance: int = 70,
-            swirl_field: NoiseField = NoiseField(),
-            depth: int = 1,
-            feedback: float = 0.7,
-        ):
+        self,
+        shades: List[Tuple[float, float, Shade]],
+        warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
+        warp_size: int = 0,
+        color_variance: int = 70,
+        swirl_field: NoiseField = NoiseField(),
+        depth: int = 1,
+        feedback: float = 0.7,
+    ):
         super().__init__(warp_noise=warp_noise, warp_size=warp_size)
         self.color_variance = color_variance
         self.swirl_field = swirl_field
         self.depth = depth
         self.feedback = feedback
         self.shades = shades
-
 
     def determine_shade(self, xy_coords: Tuple[int, int]):
         """
@@ -507,16 +506,15 @@ class LinearGradient(Shade):
     """
 
     def __init__(
-            self,
-            color_points: List[Tuple[int, Tuple[int, int, int]]],
-            axis: int = 0,
-            warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
-            warp_size: int = 0,
-        ):
+        self,
+        color_points: List[Tuple[int, Tuple[int, int, int]]],
+        axis: int = 0,
+        warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
+        warp_size: int = 0,
+    ):
         super().__init__(warp_noise=warp_noise, warp_size=warp_size)
         self.color_points = color_points
         self.axis = axis
-
 
     def determine_shade(self, xy_coords):
         """
@@ -546,12 +544,13 @@ class LinearGradient(Shade):
         last_color = [i[0] for i in self.color_points if i[1] == last_item][0]
         distance_from_next = abs(next_item - xy_coords[self.axis])
         distance_from_last = abs(last_item - xy_coords[self.axis])
-        from_last_to_next = distance_from_last / (distance_from_next + distance_from_last)
+        from_last_to_next = distance_from_last / (
+            distance_from_next + distance_from_last
+        )
 
         color = [0 for i in len(next_color)]
         for i, _ in enumerate(next_color):
-            color_difference = (
-                last_color[i] - next_color[i]) * from_last_to_next
+            color_difference = (last_color[i] - next_color[i]) * from_last_to_next
             color[i] = last_color[i] - color_difference
 
         return color_clamp(color)
@@ -569,6 +568,7 @@ class VerticalGradient(LinearGradient):
     anything after 100 will be white
     between 50 and 100 will be grey, with tone based on proximity to 50 or 100
     """
+
     def __init__(
         self,
         color_points: List[Tuple[int, Tuple[int, int, int]]],
@@ -596,7 +596,8 @@ class HorizontalGradient(LinearGradient):
     between 50 and 100 will be grey, with tone based on proximity to 50 or 100
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         color_points: List[Tuple[int, Tuple[int, int, int]]],
         warp_noise: Tuple[NoiseField, NoiseField] = noise_fields(channels=2),
         warp_size: int = 0,

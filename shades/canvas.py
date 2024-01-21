@@ -10,13 +10,16 @@ from collections import defaultdict
 from PIL import Image
 import numpy as np
 
+
 class ColorMode(Enum):
     """
     Enum for supported color modes.
     """
+
     RGB = "RGB"
     HSV = "HSV"
     LAB = "LAB"
+
 
 class Canvas:
     """
@@ -39,8 +42,8 @@ class Canvas:
         self.mode = mode
         self.width: int = width
         self.height: int = height
-        self.x_center: int = int(self.width/2)
-        self.y_center: int = int(self.height/2)
+        self.x_center: int = int(self.width / 2)
+        self.y_center: int = int(self.height / 2)
         self.center: Tuple[int, int] = (self.x_center, self.y_center)
         self._image_array: np.ndarray = np.full(
             (height, width, 3),
@@ -60,8 +63,8 @@ class Canvas:
             shaded_area = np.pad(
                 shaded_area,
                 (
-                    (y, self.height-(height+y)),
-                    (x, self.width-(width+x)),
+                    (y, self.height - (height + y)),
+                    (x, self.width - (width + x)),
                     (0, 0),
                 ),
                 constant_values=0,
@@ -87,8 +90,7 @@ class Canvas:
         return image
 
     def show(self) -> None:
-        """
-        """
+        """ """
         self.image().show()
 
     def save(self, path: str, format: Optional[str] = None, **kwargs) -> None:
@@ -99,7 +101,14 @@ class Canvas:
         """
         self.image().save(path, format=format, **kwargs)
 
-    def rectangle(self, shade: Callable, xy: Tuple[int, int], width: int, height: int, rotation: int = 0) -> "Canvas":
+    def rectangle(
+        self,
+        shade: Callable,
+        xy: Tuple[int, int],
+        width: int,
+        height: int,
+        rotation: int = 0,
+    ) -> "Canvas":
         """
         Draw a rectangle on the canvas using the given shade.
 
@@ -107,13 +116,15 @@ class Canvas:
         """
         x, y = xy
         array: np.ndarray = np.zeros((self.height, self.width))
-        array[y:y+height, x:x+width] = 1
+        array[y : y + height, x : x + width] = 1
         if rotation != 0:
             array = self.rotate(array, xy, rotation)
         self._stack.append((shade, array))
         return self
 
-    def square(self, shade: Callable, xy: Tuple[int, int], size: int, rotation: int = 0) -> "Canvas":
+    def square(
+        self, shade: Callable, xy: Tuple[int, int], size: int, rotation: int = 0
+    ) -> "Canvas":
         """
         Draw a square on the canvas using the given shade.
 
@@ -123,17 +134,21 @@ class Canvas:
         """
         return self.rectangle(shade, xy, size, size, rotation)
 
-    def line(self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], weight=1) -> "Canvas":
+    def line(
+        self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], weight=1
+    ) -> "Canvas":
         """
         Draw a line on the canvas using the given shade.
         """
         array: np.ndarray = np.zeros((self.height, self.width))
         for x, y in self._points_in_line(start, end):
-            array[y, x:x+weight] = 1
+            array[y, x : x + weight] = 1
         self._stack.append((shade, array))
         return self
 
-    def _points_in_line(self, start: Tuple[int, int], end: Tuple[int, int]) -> Generator[Tuple[int, int], None, None]:
+    def _points_in_line(
+        self, start: Tuple[int, int], end: Tuple[int, int]
+    ) -> Generator[Tuple[int, int], None, None]:
         """
         Get the points in a line, iterating across the y axis
         """
@@ -145,7 +160,9 @@ class Canvas:
             x = int(round(slope * y + intercept))
             yield (x, y)
 
-    def polygon(self, shade: Callable, *points: Tuple[int, int], rotation: int = 0) -> "Canvas":
+    def polygon(
+        self, shade: Callable, *points: Tuple[int, int], rotation: int = 0
+    ) -> "Canvas":
         """
         Draw a polygon on canvas with the given shade.
 
@@ -153,8 +170,7 @@ class Canvas:
         between first points, to second, to third (etc) to first.
         """
         pairs = [
-            (point, points[(i + 1) % len(points)])
-            for i, point in enumerate(points)
+            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
         y_to_x_points: DefaultDict[int, List[int]] = defaultdict(lambda: [])
         for pair in pairs:
@@ -175,23 +191,38 @@ class Canvas:
         Draw a circle on canvas with the given shade.
         """
         x, y = center
-        i, j = np.ogrid[:self.height, :self.width]
+        i, j = np.ogrid[: self.height, : self.width]
         array: np.ndarray = np.zeros((self.height, self.width))
-        array[(i - y)**2 + (j - x)**2 <= radius**2] = 1
+        array[(i - y) ** 2 + (j - x) ** 2 <= radius**2] = 1
         self._stack.append((shade, array))
         return self
-        
-    def rotate(self, array: np.ndarray, center: Tuple[int, int], degrees: int) -> np.ndarray:
+
+    def rotate(
+        self, array: np.ndarray, center: Tuple[int, int], degrees: int
+    ) -> np.ndarray:
         radians = np.radians(degrees)
         y_center, x_center = center
         y_size, x_size = array.shape
         i, j = np.ogrid[:y_size, :x_size]
-        i_rotated = np.cos(radians) * (i - y_center) - np.sin(radians) * (j - x_center) + y_center
-        j_rotated = np.sin(radians) * (i - y_center) + np.cos(radians) * (j - x_center) + x_center
+        i_rotated = (
+            np.cos(radians) * (i - y_center)
+            - np.sin(radians) * (j - x_center)
+            + y_center
+        )
+        j_rotated = (
+            np.sin(radians) * (i - y_center)
+            + np.cos(radians) * (j - x_center)
+            + x_center
+        )
         i_rotated = np.round(i_rotated).astype(int)
         j_rotated = np.round(j_rotated).astype(int)
         rotated_grid = np.zeros_like(array)
-        mask = (i_rotated >= 0) & (i_rotated < y_size) & (j_rotated >= 0) & (j_rotated < x_size)
+        mask = (
+            (i_rotated >= 0)
+            & (i_rotated < y_size)
+            & (j_rotated >= 0)
+            & (j_rotated < x_size)
+        )
         rotated_grid[mask] = array[i_rotated[mask], j_rotated[mask]]
 
         return rotated_grid

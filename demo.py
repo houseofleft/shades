@@ -4,7 +4,8 @@ if __name__ == "__main__":
     cool = Canvas(mode=ColorMode.RGB)
     one = block_color((20, 20, 240))
     two = gradient((150, 150, 150))
-    (Canvas()
+    (
+        Canvas()
         .rectangle(one, cool.center, 200, 200)
         .square(one, (30, 40), 300)
         .square(one, (30, 40), 300, rotation=324)
@@ -12,4 +13,3 @@ if __name__ == "__main__":
         .polygon(two, (40, 50), (234, 35), (400, 400))
         .show()
     )
-    

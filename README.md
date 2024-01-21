@@ -19,7 +19,7 @@ Plan:
 - [x] New, lazy evaluated canvas class to hold all state
 - [ ] Port over geometry maths from Shade class into canvas
     - [x] Generic polygon function (+ rectangle, square, triangle implementations)
-    - [ ] Circle
+    - [x] Circle
     - [ ] Perlin noise shifted geometry
     - [ ] New rotation functionality?
 - [x] Shades can now be any function taking a numpy array of coordinates + returning corresponding array of colors

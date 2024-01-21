@@ -139,7 +139,6 @@ class Canvas:
         intercept = start[1] - slope * start[0]
         y_start = min(start[1], end[1])
         y_end = max(start[1], end[1])
-        points = []
         for y in range(y_start, y_end):
             x = int(round(slope * y + intercept))
             yield (x, y)
@@ -164,6 +163,17 @@ class Canvas:
             xs = y_to_x_points[y]
             for start_x, end_x in zip(xs[::2], xs[1::2]):
                 array[y, start_x:end_x] = 1
+        self._stack.append((shade, array))
+        return self
+
+    def circle(self, shade: Callable, center: Tuple[int, int], radius: int) -> "Canvas":
+        """
+        Draw a circle on canvas with the given shade.
+        """
+        x, y = center
+        i, j = np.ogrid[:self.height, :self.width]
+        array: np.ndarray = np.zeros((self.height, self.width))
+        array[(i - y)**2 + (j - x)**2 <= radius**2] = 1
         self._stack.append((shade, array))
         return self
         

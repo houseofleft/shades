@@ -10,6 +10,8 @@ from collections import defaultdict
 from PIL import Image
 import numpy as np
 
+from shades import NoiseField
+
 
 class ColorMode(Enum):
     """
@@ -145,6 +147,32 @@ class Canvas:
             array[y, x : x + weight] = 1
         self._stack.append((shade, array))
         return self
+
+    def warped_line(
+        self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], warp_noise: Tuple[NoiseField, NoiseField], shift: int, weight: int = 1,
+    ) -> "Canvas":
+        """
+        """
+        array: np.ndarray = np.zeros((self.height, self.width))
+        for x, y in self._points_in_line(start, end):
+            array[y, x : x + weight] = 1
+        array = self._shift_array_points(array, warp_noise, shift)
+        raise NotImplementedError
+
+    def _shift_array_points(self, array: np.array, warp_noise: Tuple[NoiseField, NoiseField], shift: int) -> np.ndarray:
+        """
+        move points in array based on x and y noise fields.
+
+        Shift determines relation between a noise output of "1"
+        and movement accross the canvas
+        """
+        raise NotImplementedError
+
+    # Ensure the shifted points are still within the [0, 1] range
+    shifted_x_array = np.clip(shifted_x_array, 0, 1)
+    shifted_y_array = np.clip(shifted_y_array, 0, 1)
+
+    return shifted_x_array, shifted_y_array
 
     def _points_in_line(
         self, start: Tuple[int, int], end: Tuple[int, int]

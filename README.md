@@ -26,4 +26,5 @@ Plan:
 - [x] This should give a big speedup to draw operations by vectorizing them, but introduce a shade API for applying a standard x/y function (which will be slow, but helpful for quick sketching and customisation)
 - [ ] Full api + convenience functions, any relevant refactoring
 - [x] Some nicer, github hosted docs with pdoc + new readme
+- [ ] Tests & debugging
 

@@ -25,5 +25,5 @@ Plan:
 - [x] Shades can now be any function taking a numpy array of coordinates + returning corresponding array of colors
 - [x] This should give a big speedup to draw operations by vectorizing them, but introduce a shade API for applying a standard x/y function (which will be slow, but helpful for quick sketching and customisation)
 - [ ] Full api + convenience functions, any relevant refactoring
-- [ ] Some nicer, github hosted docs with pdoc + new readme
+- [x] Some nicer, github hosted docs with pdoc + new readme
 

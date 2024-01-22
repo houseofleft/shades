@@ -1,4 +1,4 @@
-from shades import Canvas, block_color, ColorMode, gradient
+from shades import Canvas, block_color, ColorMode, gradient, noise_fields
 
 if __name__ == "__main__":
     cool = Canvas(mode=ColorMode.RGB)
@@ -6,10 +6,8 @@ if __name__ == "__main__":
     two = gradient((150, 150, 150))
     (
         Canvas()
-        .rectangle(one, cool.center, 200, 200)
-        .square(one, (30, 40), 300)
         .square(one, (30, 40), 300, rotation=324)
-        .line(one, (0, 0), (500, 500), 10)
-        .polygon(two, (40, 50), (234, 35), (400, 400))
+        .line(two, (0, 0), (500, 500), 10)
+        .warped_line(one, (0, 0), (500, 500), noise_fields(channels=2), shift=100)
         .show()
     )

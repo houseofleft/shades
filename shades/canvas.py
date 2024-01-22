@@ -10,7 +10,7 @@ from collections import defaultdict
 from PIL import Image
 import numpy as np
 
-from shades import NoiseField
+from shades.noise_fields import NoiseField
 
 
 class ColorMode(Enum):
@@ -157,7 +157,8 @@ class Canvas:
         for x, y in self._points_in_line(start, end):
             array[y, x : x + weight] = 1
         array = self._shift_array_points(array, warp_noise, shift)
-        raise NotImplementedError
+        self._stack.append((shade, array))
+        return self
 
     def _shift_array_points(self, array: np.array, warp_noise: Tuple[NoiseField, NoiseField], shift: int) -> np.ndarray:
         """
@@ -165,14 +166,28 @@ class Canvas:
 
         Shift determines relation between a noise output of "1"
         and movement accross the canvas
+
+        This is, at least currently, implemented as a very slow operation,
+        iterating over all non-zero points, and moving them. It'll also
+        potentially leave "gaps" - so use carefully, ideally on outlines
+        of shapes rather than no the final shape.
         """
-        raise NotImplementedError
+        new_array: np.ndarray = np.zeros((self.height, self.width))
+        height, width = array.shape
+        warp_noise = [i.noise_range((0, 0), height, width) for i in warp_noise]
+        warp_noise = [(i - 0.5) * 2 * shift for i in warp_noise]
+        y_noise, x_noise = warp_noise
+        y_i, x_i = np.indices(array.shape)
+        y_noise = y_noise.astype(int) + y_i
+        x_noise = x_noise.astype(int) + x_i
+        new_locs = np.stack((y_noise, x_noise))
+        to_move = np.argwhere(array == 1)
+        for y, x in to_move:
+            new_x = new_locs[0][y][x]
+            new_y = new_locs[1][y][x]
+            new_array[new_y][new_x] = 1
+        return new_array
 
-    # Ensure the shifted points are still within the [0, 1] range
-    shifted_x_array = np.clip(shifted_x_array, 0, 1)
-    shifted_y_array = np.clip(shifted_y_array, 0, 1)
-
-    return shifted_x_array, shifted_y_array
 
     def _points_in_line(
         self, start: Tuple[int, int], end: Tuple[int, int]
@@ -180,7 +195,7 @@ class Canvas:
         """
         Get the points in a line, iterating across the y axis
         """
-        slope = (end[1] - start[1]) / (end[0] - start[0])
+        slope = (end[1] - start[1]) / (end[0] - start[0])  # TODO: handle NA slope
         intercept = start[1] - slope * start[0]
         y_start = min(start[1], end[1])
         y_end = max(start[1], end[1])

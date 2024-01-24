@@ -25,6 +25,12 @@ Plan:
 - [x] Shades can now be any function taking a numpy array of coordinates + returning corresponding array of colors
 - [x] This should give a big speedup to draw operations by vectorizing them, but introduce a shade API for applying a standard x/y function (which will be slow, but helpful for quick sketching and customisation)
 - [ ] Full api + convenience functions, any relevant refactoring
+  - [x] Rotation on all shapes
+  - [ ] outline equivalent for all shapes
+  - [ ] warp equivalent for all shapes
+  - [ ] Canvas.grid() iterator to pull out x, y coords
+  - [ ] Some thoughts around anti-aliasing etc
+
 - [x] Some nicer, github hosted docs with pdoc + new readme
 - [ ] Tests & debugging
 

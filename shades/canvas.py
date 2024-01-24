@@ -57,6 +57,8 @@ class Canvas:
     def _render_stack(self):
         for shade, area in self._stack:
             nonzero = np.nonzero(area)
+            if len(nonzero[0]) == 0:
+                continue
             y = np.min(nonzero[0])
             height = np.max(nonzero[0]) - y
             x = np.min(nonzero[1])
@@ -106,45 +108,84 @@ class Canvas:
     def rectangle(
         self,
         shade: Callable,
-        xy: Tuple[int, int],
+        corner: Tuple[int, int],
         width: int,
         height: int,
         rotation: int = 0,
+        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a rectangle on the canvas using the given shade.
 
-        xy point corresponds to top left corner of the rectangle.
+        corner point corresponds to top left corner of the rectangle.
         """
-        x, y = xy
+        x, y = corner
         array: np.ndarray = np.zeros((self.height, self.width))
         array[y : y + height, x : x + width] = 1
         if rotation != 0:
-            array = self.rotate(array, xy, rotation)
+            rotate_on = rotate_on or corner
+            array = self.rotate(array, rotate_on, rotation)
         self._stack.append((shade, array))
         return self
 
+    def rectangle_outline(
+        self,
+        shade: Callable,
+        corner: Tuple[int, int],
+        width: int,
+        height: int,
+        rotation: int = 0,
+        weight: int = 1,
+        rotate_on: Optional[Tuple[int, int]] = None,
+    ) -> "Canvas":
+        """
+        Draw a rectangle outline on the canvas using the given shade.
+
+        corner point corresponds to top left corner of the rectangle.
+        """
+        x, y = corner
+        self.line(shade, corner, (x, y + height), weight=weight, rotation=rotation, rotate_on=rotate_on)
+        self.line(shade, corner, (x + width, y), weight=weight, rotation=rotation, rotate_on=rotate_on)
+        self.line(shade, (x, y + height), (x + width, y + height), weight=weight, rotation=rotation, rotate_on=rotate_on)
+        self.line(shade, (x + width, y), (x + width, y + height), weight=weight, rotation=rotation, rotate_on=rotate_on)
+        return self
+
+
     def square(
-        self, shade: Callable, xy: Tuple[int, int], size: int, rotation: int = 0
+        self, shade: Callable, corner: Tuple[int, int], width: int, rotation: int = 0, rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a square on the canvas using the given shade.
 
-        xy point corresponts to the top left corner of the square.
+        corver point corresponts to the top left corner of the square.
 
         Size relates to the height or width (they are the same).
         """
-        return self.rectangle(shade, xy, size, size, rotation)
+        return self.rectangle(shade, corner, width, width, rotation, rotate_on)
+
+
+    def square_outline(
+        self, shade: Callable, corner: Tuple[int, int], width: int, rotation: int = 0, weight: int = 0, rotate_on: Optional[Tuple[int, int]] = None,
+    ) -> "Canvas":
+        """
+        Draw a rectangle outline on the canvas using the given shade.
+
+        corner point corresponds to top left corner of the rectangle.
+        """
+        return self.rectangle_outline(shade, corner, width, width, rotation, weight, rotate_on=rotate_on)
 
     def line(
-        self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], weight=1
+        self, shade: Callable, start: Tuple[int, int], end: Tuple[int, int], weight: int = 1, rotation: int = 0, rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a line on the canvas using the given shade.
         """
         array: np.ndarray = np.zeros((self.height, self.width))
         for x, y in self._points_in_line(start, end):
-            array[y, x : x + weight] = 1
+            array[y : y + weight, x : x + weight] = 1
+        if rotation != 0:
+            rotate_on = rotate_on or start
+            array = self.rotate(array, rotate_on, rotation) 
         self._stack.append((shade, array))
         return self
 
@@ -195,16 +236,30 @@ class Canvas:
         """
         Get the points in a line, iterating across the y axis
         """
-        slope = (end[1] - start[1]) / (end[0] - start[0])  # TODO: handle NA slope
+        if end[1] == start[1] and end[0] == start[0]:  # point is 0 length
+            yield end
+            return
+        if end[1] == start[1]:  # point only moves over x axis
+            x_dir = 1 if start[0] < end[0] else -1
+            for x in range(start[0], end[0] + 1, x_dir):
+                yield (x, start[1])
+            return
+        if end[0] == start[0]:  # point only moves over y axis
+            y_dir = 1 if start[1] < end[1] else -1
+            for y in range(start[1], end[1] + 1, y_dir):
+                yield (start[0], y)
+            return
+        slope = (end[1] - start[1]) / (end[0] - start[0])
         intercept = start[1] - slope * start[0]
         y_start = min(start[1], end[1])
         y_end = max(start[1], end[1])
-        for y in range(y_start, y_end):
+        y_dir = 1 if y_start < y_end else -1
+        for y in range(y_start, y_end + 1, y_dir):
             x = int(round(slope * y + intercept))
             yield (x, y)
 
     def polygon(
-        self, shade: Callable, *points: Tuple[int, int], rotation: int = 0
+        self, shade: Callable, *points: Tuple[int, int], rotation: int = 0, rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a polygon on canvas with the given shade.
@@ -225,9 +280,14 @@ class Canvas:
             for start_x, end_x in zip(xs[::2], xs[1::2]):
                 array[y, start_x:end_x] = 1
         if rotation != 0:
-            array = self.rotate(array, points[0], rotation)
+            rotate_on = rotate_on or points[0]
+            array = self.rotate(array, rotate_on, rotation)
         self._stack.append((shade, array))
         return self
+
+    def triangle(
+        self, shade: Callable, point_one: Tuple[int, int], point_two: Tuple[int, int], point_three: Tuple[int, int], rotation: int = 0) -> "Canvas":
+        return self.polyon(shade, point_one, point_two, point_three, rotation=rotation)
 
     def circle(self, shade: Callable, center: Tuple[int, int], radius: int) -> "Canvas":
         """

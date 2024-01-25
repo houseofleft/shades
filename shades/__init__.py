@@ -5,9 +5,8 @@ Because of the relatively small level of classes and functions
 everything is imported into 'shades' name space to avoid
 long import commands for single items.
 """
-from .canvas import *  # noqa
-from .noise_fields import *  # noqa
-from .shades import *  # noqa
-from .utils import *  # noqa
+from shades.canvas import Canvas  # noqa
+from shades.noise import noise_fields  # noqa
+from shades.shades import block_color, gradient  # noqa
 
-__version__ = "2.0.0"
+__version__ = "2.0.0a"

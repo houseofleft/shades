@@ -12,7 +12,7 @@ from collections import defaultdict
 from PIL import Image
 import numpy as np
 
-from shades.noise_fields import NoiseField
+from shades.noise import NoiseField
 
 
 class ColorMode(Enum):
@@ -113,6 +113,7 @@ class Canvas:
             x = np.min(nonzero[1])
             width = np.max(nonzero[1]) - x
             shaded_area = shade((x, y), width, height)
+            shaded_area = np.clip(shaded_area, 1, 255)
             shaded_area = np.pad(
                 shaded_area,
                 (
@@ -282,6 +283,7 @@ class Canvas:
 
         Returned coordinates will always be (x, y) regardless of `x_first`.
         """
+        y_size = y_size or x_size
         first, second = (
             (self.width, self.height) if x_first else (self.height, self.width)
         )
@@ -477,8 +479,8 @@ class Canvas:
         shade: Callable,
         corner: Tuple[int, int],
         width: int,
-        warp_noise=warp_noise,
-        shift=shift,
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
         rotation: int = 0,
         weight: int = 0,
         rotate_on: Optional[Tuple[int, int]] = None,

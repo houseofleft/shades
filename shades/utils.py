@@ -1,27 +1,21 @@
 """
-utils
-
-contains general purpose functions for use within or outside module
+General handy function for drawing
 """
 from typing import Tuple, Union
 from random import randint
 
 
-def color_clamp(color: Tuple[int, int, int]) -> Tuple[int, int, int]:
-    """
-    Ensures a three part iterable is a properly formatted color
-    (i.e. all numbers between 0 and 255)
-    """
-    clamped_color = [max(min(int(i), 255), 0) for i in color]
-    return tuple(clamped_color)
 
-
-def distance_between_points(xy1: Tuple[int, int], xy2: Tuple[int, int]) -> float:
+def euclidean_distance(point_one: Tuple[int, int], point_two: Tuple[int, int]) -> float:
     """
-    Returns the euclidean distance between two points.
-    https://en.wikipedia.org/wiki/Euclidean_distance
+    Returns the
+    (euclidean distance)[https://en.wikipedia.org/wiki/Euclidean_distance]
+    between two points.
     """
-    return (((xy1[0] - xy2[0]) ** 2) + ((xy1[1] - xy2[1]) ** 2)) ** 0.5
+    return (
+        ((point_one[0] - point_two[0]) ** 2) +
+        ((point_one[1] - point_two[1]) ** 2)
+    ) ** 0.5
 
 
 def randomly_shift_point(

@@ -7,7 +7,7 @@ from typing import Tuple, Callable
 
 import numpy as np
 
-from shades.noise_fields import noise_fields, NoiseField
+from shades.noise import noise_fields, NoiseField
 
 
 def block_color(color: Tuple[int, int, int]) -> Callable:

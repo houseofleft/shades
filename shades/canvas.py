@@ -54,7 +54,25 @@ class Canvas:
         )
         self._stack: List[Tuple[Callable, np.ndarray]] = []
 
-    def _render_stack(self):
+    def _compress_and_render_stack(self) -> None:
+        self._compress_stack()
+        self._render_stack()
+
+    def _compress_stack(self) -> None:
+        # first off, lets get smush things togethr
+        # we'll do some hacky iteration, since we want to
+        # dynamically choose where we go next
+        last_index = 0
+        for i, item in enumerate(self._stack):
+            if item[0] != self._stack[last_index][0]:
+                import ipdb; ipdb.set_trace()
+        self._stack[last_index:i+1]  # <- Do something to smush these all together?
+        import ipdb; ipdb.set_trace()
+
+
+        import ipdb; ipdb.set_trace()
+
+    def _render_stack(self) -> None:
         for shade, area in self._stack:
             nonzero = np.nonzero(area)
             if len(nonzero[0]) == 0:
@@ -86,7 +104,7 @@ class Canvas:
         """
         Return PIL image directly
         """
-        self._render_stack()
+        self._compress_and_render_stack()
         image = Image.fromarray(
             self._image_array.astype("uint8"),
             mode=self.mode.value,

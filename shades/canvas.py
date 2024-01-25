@@ -59,18 +59,22 @@ class Canvas:
         self._render_stack()
 
     def _compress_stack(self) -> None:
-        # first off, lets get smush things togethr
-        # we'll do some hacky iteration, since we want to
-        # dynamically choose where we go next
+        if len(self._stack) == 0:
+            return  # nothing to do
+        compressed: List[Tuple[Callable, np.ndarray]] = []
         last_index = 0
         for i, item in enumerate(self._stack):
             if item[0] != self._stack[last_index][0]:
-                import ipdb; ipdb.set_trace()
-        self._stack[last_index:i+1]  # <- Do something to smush these all together?
-        import ipdb; ipdb.set_trace()
-
-
-        import ipdb; ipdb.set_trace()
+                compressed.append((
+                    self._stack[last_index][0],
+                    np.maximum.reduce([i[1] for i in self._stack[last_index:i+1]]),
+                ))
+                last_index = i
+        compressed.append((
+            self._stack[last_index][0],
+            np.maximum.reduce([i[1] for i in self._stack[last_index:i+1]]),
+        ))
+        self._stack = compressed
 
     def _render_stack(self) -> None:
         for shade, area in self._stack:
@@ -122,6 +126,53 @@ class Canvas:
         Any additional keyword arguments will be passed to image writer.
         """
         self.image().save(path, format=format, **kwargs)
+
+    def grid(
+        self,
+        x_size: int,
+        y_size: Optional[int] = None,
+        x_first: bool = True,
+    ) -> Generator[Tuple[int, int], None, None]:
+        """
+        Generator to return x and y coordinates for a grid. Convenience to
+        saves either double nested loops or lots of "list(range(canvas.width))"
+        type expressions.
+
+        If y_size is None, then will assume to be the same as x_size.
+
+        Leave x_first as true to iterate first through xs, then ys,
+        i.e. as if the loops was:
+        ```python
+        for x in xs:
+          for y in ys:
+            ...
+        ```
+        otherwise, making False would be the equivalent of swapping those
+        two lines around.
+
+        Here's an example for use to print out the coordinates in a square grid:
+        ```python
+        for x, y in canvas.grid(10):
+            print(x, y)
+        ```
+        would print (0, 0), (0, 10), (0, 20) etc. . .
+
+        Returned coordinates will always be (x, y) regardless of `x_first`.
+        """
+        first, second = (
+            (self.width, self.height) if x_first
+            else (self.height, self.width)
+        )
+        first_i, second_i = (
+            (x_size, y_size) if x_first
+            else (y_size, x_size)
+        )
+        for i in range(0, first + 1, first_i):
+            for j in range(0, second + 1, second_i):
+                if x_first:
+                    yield (i, j)
+                else:
+                    yield (j, i)
 
     def rectangle(
         self,

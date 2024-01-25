@@ -1,4 +1,3 @@
-from itertools import permutations
 from random import random
 
 from shades import Canvas, block_color, ColorMode, gradient, noise_fields

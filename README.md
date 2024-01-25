@@ -28,8 +28,9 @@ Plan:
   - [x] Rotation on all shapes
   - [ ] outline equivalent for all shapes
   - [ ] warp equivalent for all shapes
-  - [ ] Canvas.grid() iterator to pull out x, y coords
-  - [ ] Some thoughts around anti-aliasing etc
+  - [x] Canvas.grid() iterator to pull out x, y coords
+
+- [x] Optimisations needed, at the moment code is *fast* for big shapes and color work, but *slow* if you want to draw lots of tiny shapes. Some profiling needed, but I suspect this is just lots of seperate draw operations, and could be solved with some "colapsing" of the stack (i.e. for parts of the canvas stack that are next to each other with the same shade)
 
 - [x] Some nicer, github hosted docs with pdoc + new readme
 - [ ] Tests & debugging

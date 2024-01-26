@@ -612,7 +612,15 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
-        raise NotImplementedError
+        pairs = [
+            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
+        ]
+        new_points: List[Tuple[int, int]] = []
+        for pair in pairs:
+            for point in self._points_in_line(*pair):
+                new_points.append(point)
+        return self.polygon(shade, *new_points, warp_noise, shift, rotation, rotate_on)
+
 
     def polygon_outline(
         self,
@@ -685,7 +693,36 @@ class Canvas:
         rotation: int = 0,
         rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
-        return self.polyon(shade, point_one, point_two, point_three, rotation=rotation)
+        return self.polygon(
+            shade,
+            point_one,
+            point_two,
+            point_three,
+            rotation=rotation,
+            rotate_on=rotate_on,
+        )
+
+    def warped_triangle(
+        self,
+        shade: Callable,
+        point_one: Tuple[int, int],
+        point_two: Tuple[int, int],
+        point_three: Tuple[int, int],
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        rotation: int = 0,
+        rotate_on: Optional[Tuple[int, int]] = None,
+    ) -> "Canvas":
+        return self.warped_polyon(
+            shade,
+            point_one,
+            point_two,
+            point_three,
+            warp_noise=warp_noise,
+            shift=shift,
+            rotation=rotation,
+            rotate_on=rotate_on,
+        )
 
     def triangle_outline(
         self,
@@ -698,10 +735,39 @@ class Canvas:
         weight: int = 1,
     ) -> "Canvas":
         return self.polyon_outline(
-            shade, point_one, point_two, point_three, rotation=rotation, weight=weight
+            shade, point_one, point_two, point_three, rotation=rotation, weight=weight,
         )
 
-    def circle(self, shade: Callable, center: Tuple[int, int], radius: int) -> "Canvas":
+    def warped_triangle_outline(
+        self,
+        shade: Callable,
+        point_one: Tuple[int, int],
+        point_two: Tuple[int, int],
+        point_three: Tuple[int, int],
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        rotation: int = 0,
+        rotate_on: Optional[Tuple[int, int]] = None,
+        weight: int = 1,
+    ) -> "Canvas":
+        return self.warped_polyon_outline(
+            shade,
+            point_one,
+            point_two,
+            point_three,
+            warp_noise=warp_noise,
+            shift=shift,
+            rotation=rotation,
+            rotate_on=rotate_on,
+            weight=weight,
+        )
+
+    def circle(
+        self,
+        shade: Callable,
+        center: Tuple[int, int],
+        radius: int,
+    ) -> "Canvas":
         """
         Draw a circle on canvas with the given shade.
         """
@@ -712,10 +778,36 @@ class Canvas:
         self._stack.append((shade, array))
         return self
 
+    def warped_circle(
+        self,
+        shade: Callable,
+        center: Tuple[int, int],
+        radius: int,
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+    ) -> "Canvas":
+        raise NotImplementedError
+
     def circle_outline(
-        self, shade: Callable, center: Tuple[int, int], radius: int
+        self,
+        shade: Callable,
+        center: Tuple[int, int],
+        radius: int,
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
     ) -> "Canvas":
         """
         Draw a circle on canvas with the given shade.
         """
+        raise NotImplementedError
+
+    def warped_circle_outline(
+        self,
+        shade: Callable,
+        center: Tuple[int, int],
+        radius: int,
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        weight: int = 1,
+    ) -> "Canvas":
         raise NotImplementedError

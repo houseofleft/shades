@@ -334,7 +334,18 @@ class Canvas:
 
         Corner point corresponds to top left corner of the rectangle.
         """
-        raise NotImplementedError
+        x, y = corner
+        return self.warped_polygon(
+            shade,
+            (x, y),
+            (x, y + height),
+            (x + width, y + height),
+            (x + width, y),
+            warp_noise=warp_noise,
+            shift=shift,
+            rotation=rotation,
+            rotate_on=rotate_on,
+        )
 
     def rectangle_outline(
         self,
@@ -403,7 +414,19 @@ class Canvas:
 
         corner point corresponds to top left corner of the rectangle.
         """
-        raise NotImplementedError
+        x, y = corner
+        return self.warped_polygon_outline(
+            shade,
+            (x, y),
+            (x, y + height),
+            (x + width, y + height),
+            (x + width, y),
+            warp_noise=warp_noise,
+            shift=shift,
+            rotation=rotation,
+            rotate_on=rotate_on,
+            weight=weight,
+        )
 
     def square(
         self,
@@ -605,7 +628,20 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
-        raise NotImplementedError
+        pairs = [
+            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
+        ]
+        rotate_on = rotate_on or points[0]
+        for point_one, point_two in pairs:
+            self.line(
+                shade,
+                start=point_one,
+                end=point_two,
+                weight=weight,
+                rotation=rotation,
+                rotate_on=rotate_on,
+            )
+        return self
 
     def warped_polygon_outline(
         self,
@@ -623,7 +659,22 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
-        raise NotImplementedError
+        pairs = [
+            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
+        ]
+        rotate_on = rotate_on or points[0]
+        for point_one, point_two in pairs:
+            self.warped_line(
+                shade,
+                start=point_one,
+                end=point_two,
+                weight=weight,
+                rotation=rotation,
+                rotate_on=rotate_on,
+                warp_noise=warp_noise,
+                shift=shift,
+            )
+        return self
 
     def triangle(
         self,

@@ -779,12 +779,12 @@ class Canvas:
         return self
 
     def _circle_edge_points(self, center: Tuple[int, int], radius: int):
-        num_points = 500
+        circumference = radius*2
         return [
             (
-                center[0] + radius * np.cos(2*np.pi*i/num_points),
-                center[1] + radius * np.sin(2*np.pi*i/num_points)
-            ) for i in range(num_points)
+                center[0] + radius * np.cos(2*np.pi*i/circumference),
+                center[1] + radius * np.sin(2*np.pi*i/circumference)
+            ) for i in range(circumference)
         ]
 
 

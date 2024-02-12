@@ -24,10 +24,10 @@ Plan:
     - [x] New rotation functionality?
 - [x] Shades can now be any function taking a numpy array of coordinates + returning corresponding array of colors
 - [x] This should give a big speedup to draw operations by vectorizing them, but introduce a shade API for applying a standard x/y function (which will be slow, but helpful for quick sketching and customisation)
-- [ ] Full api + convenience functions, any relevant refactoring
+- [x] Full api + convenience functions, any relevant refactoring
   - [x] Rotation on all shapes
-  - [ ] outline equivalent for all shapes
-  - [ ] warp equivalent for all shapes
+  - [x] outline equivalent for all shapes
+  - [x] warp equivalent for all shapes
   - [x] Canvas.grid() iterator to pull out x, y coords
 
 - [x] Optimisations needed, at the moment code is *fast* for big shapes and color work, but *slow* if you want to draw lots of tiny shapes. Some profiling needed, but I suspect this is just lots of seperate draw operations, and could be solved with some "colapsing" of the stack (i.e. for parts of the canvas stack that are next to each other with the same shade)

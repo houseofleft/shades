@@ -778,6 +778,16 @@ class Canvas:
         self._stack.append((shade, array))
         return self
 
+    def _circle_edge_points(self, center: Tuple[int, int], radius: int):
+        num_points = 500
+        return [
+            (
+                center[0] + radius * np.cos(2*np.pi*i/num_points),
+                center[1] + radius * np.sin(2*np.pi*i/num_points)
+            ) for i in range(num_points)
+        ]
+
+
     def warped_circle(
         self,
         shade: Callable,
@@ -786,7 +796,8 @@ class Canvas:
         warp_noise: Tuple[NoiseField, NoiseField],
         shift: int,
     ) -> "Canvas":
-        raise NotImplementedError
+        outline_points = self._circle_edge_points(center, radius)
+        return self.warped_polygon(shade, *outline, warp_noise=warp_noise, shift=shift)
 
     def circle_outline(
         self,
@@ -795,11 +806,13 @@ class Canvas:
         radius: int,
         warp_noise: Tuple[NoiseField, NoiseField],
         shift: int,
+        weight: int = 1,
     ) -> "Canvas":
         """
         Draw a circle on canvas with the given shade.
         """
-        raise NotImplementedError
+        outline_points = self._circle_edge_points(center, radius)
+        return self.polygon_outline(shade, *outline, weight=weight)
 
     def warped_circle_outline(
         self,
@@ -810,4 +823,5 @@ class Canvas:
         shift: int,
         weight: int = 1,
     ) -> "Canvas":
-        raise NotImplementedError
+        outline_points = self._circle_edge_points(center, radius)
+        return self.warped_polygon_outline(shade, *outline, warp_noise=warp_noise, shift=shift, weight=weight)

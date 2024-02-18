@@ -34,4 +34,4 @@ Plan:
 
 - [x] Some nicer, github hosted docs with pdoc + new readme
 - [ ] Tests & debugging
-
+  - [ ] handle floats, realistically, expecting ints on every shape makes a bad user experience

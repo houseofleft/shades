@@ -13,8 +13,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
-
-class NoiseField():
+class NoiseField:
     """
     An object to calculate and store perlin noise data.
 
@@ -24,18 +23,17 @@ class NoiseField():
 
     def __init__(self, scale: float = 0.002, seed: int = None) -> None:
         if seed is None:
-            self.seed = random.randint(0,9999)
+            self.seed = random.randint(0, 9999)
         else:
             self.seed = seed
         self.scale = scale
         size = 10
-        self.x_lin = np.linspace(0, (size*self.scale), size, endpoint=False)
-        self.y_lin = np.linspace(0, (size*self.scale), size, endpoint=False)
-        self.field = self.perlin_field(self.x_lin, self.y_lin)
+        self.x_lin = np.linspace(0, (size * self.scale), size, endpoint=False)
+        self.y_lin = np.linspace(0, (size * self.scale), size, endpoint=False)
+        self.field = self._perlin_field(self.x_lin, self.y_lin)
         self.x_negative_buffer = 0
         self.y_negative_buffer = 0
         self.buffer_chunks = 500
-
 
     def _roundup(self, to_round: float, nearest_n: float) -> float:
         """
@@ -43,8 +41,7 @@ class NoiseField():
         """
         return int(math.ceil(to_round / nearest_n)) * nearest_n
 
-
-    def buffer_field_right(self, to_extend: int) -> None:
+    def _buffer_field_right(self, to_extend: int) -> None:
         """
         Extends object's noise field right
         """
@@ -52,78 +49,71 @@ class NoiseField():
         max_lin = self.x_lin[-1]
 
         additional_x_lin = np.linspace(
-            max_lin+self.scale,
-            max_lin+(to_extend*self.scale),
+            max_lin + self.scale,
+            max_lin + (to_extend * self.scale),
             to_extend,
             endpoint=False,
         )
         self.field = np.concatenate(
-            [self.field,
-             self.perlin_field(additional_x_lin, self.y_lin)],
+            [self.field, self._perlin_field(additional_x_lin, self.y_lin)],
             axis=1,
         )
         self.x_lin = np.concatenate([self.x_lin, additional_x_lin])
 
-
-    def buffer_field_bottom(self, to_extend: int) -> None:
+    def _buffer_field_bottom(self, to_extend: int) -> None:
         """
         Extends object's noise field downwards
         """
         max_lin = self.y_lin[-1]
         additional_y_lin = np.linspace(
-            max_lin+self.scale,
-            max_lin+(to_extend*self.scale),
+            max_lin + self.scale,
+            max_lin + (to_extend * self.scale),
             to_extend,
             endpoint=False,
         )
         self.field = np.concatenate(
-            [self.field,
-             self.perlin_field(self.x_lin, additional_y_lin)],
+            [self.field, self._perlin_field(self.x_lin, additional_y_lin)],
             axis=0,
         )
         self.y_lin = np.concatenate([self.y_lin, additional_y_lin])
 
-
-    def buffer_field_left(self, to_extend: int) -> None:
+    def _buffer_field_left(self, to_extend: int) -> None:
         """
         Extends object's noise field left
         """
         min_lin = self.x_lin[0]
         additional_x_lin = np.linspace(
-            min_lin-(to_extend*self.scale),
+            min_lin - (to_extend * self.scale),
             min_lin,
             to_extend,
             endpoint=False,
         )
         self.field = np.concatenate(
-            [self.perlin_field(additional_x_lin, self.y_lin),
-             self.field],
+            [self._perlin_field(additional_x_lin, self.y_lin), self.field],
             axis=1,
         )
         self.x_lin = np.concatenate([additional_x_lin, self.x_lin])
         self.x_negative_buffer += to_extend
 
-
-    def buffer_field_top(self, to_extend: int) -> None:
+    def _buffer_field_top(self, to_extend: int) -> None:
         """
         Extends object's noise field upwards
         """
         min_lin = self.y_lin[0]
         additional_y_lin = np.linspace(
-            min_lin-(to_extend*self.scale),
+            min_lin - (to_extend * self.scale),
             min_lin,
             to_extend,
             endpoint=False,
         )
         self.field = np.concatenate(
-            [self.perlin_field(self.x_lin, additional_y_lin),
-             self.field],
+            [self._perlin_field(self.x_lin, additional_y_lin), self.field],
             axis=0,
         )
         self.y_lin = np.concatenate([additional_y_lin, self.y_lin])
         self.y_negative_buffer += to_extend
 
-    def perlin_field(self, x_lin: List[float], y_lin: List[float]) -> ArrayLike:
+    def _perlin_field(self, x_lin: List[float], y_lin: List[float]) -> ArrayLike:
         """
         generate field from x and y linear points
 
@@ -145,39 +135,46 @@ class NoiseField():
         # internal coordinates
         x_f, y_f = x_grid - x_i, y_grid - y_i
         # fade factors
-        u_array, v_array = self.fade(x_f), self.fade(y_f)
+        u_array, v_array = self._fade(x_f), self._fade(y_f)
         # noise components
-        n00 = self.gradient(field_256[(field_256[x_i%512] + y_i)%512], x_f, y_f)
-        n01 = self.gradient(field_256[(field_256[x_i%512] + y_i + 1)%512], x_f, y_f - 1)
-        n11 = self.gradient(
-            field_256[(field_256[((x_i%512)+1)%512] + y_i + 1)%512], x_f - 1, y_f - 1)
-        n10 = self.gradient(field_256[(field_256[((x_i%512)+1)%512] + y_i)%512], x_f - 1, y_f)
+        n00 = self._gradient(field_256[(field_256[x_i % 512] + y_i) % 512], x_f, y_f)
+        n01 = self._gradient(
+            field_256[(field_256[x_i % 512] + y_i + 1) % 512], x_f, y_f - 1
+        )
+        n11 = self._gradient(
+            field_256[(field_256[((x_i % 512) + 1) % 512] + y_i + 1) % 512],
+            x_f - 1,
+            y_f - 1,
+        )
+        n10 = self._gradient(
+            field_256[(field_256[((x_i % 512) + 1) % 512] + y_i) % 512], x_f - 1, y_f
+        )
         # combine noises
-        x_1 = self.lerp(n00, n10, u_array)
-        x_2 = self.lerp(n01, n11, u_array)
+        x_1 = self._lerp(n00, n10, u_array)
+        x_2 = self._lerp(n01, n11, u_array)
         # putting the random state back in place
         np.random.set_state(initial_random_state)
-        field = self.lerp(x_1, x_2, v_array)
+        field = self._lerp(x_1, x_2, v_array)
         field += 0.5
         return field
 
-
-    def lerp(self, a_array: ArrayLike, b_array: ArrayLike, x_array: ArrayLike) -> ArrayLike:
+    def _lerp(
+        self, a_array: ArrayLike, b_array: ArrayLike, x_array: ArrayLike
+    ) -> ArrayLike:
         "linear interpolation"
         return a_array + x_array * (b_array - a_array)
 
-
-    def fade(self, t_array: ArrayLike) -> ArrayLike:
+    def _fade(self, t_array: ArrayLike) -> ArrayLike:
         "6t^5 - 15t^4 + 10t^3"
         return 6 * t_array**5 - 15 * t_array**4 + 10 * t_array**3
 
-
-    def gradient(self, h_array: ArrayLike, x_array: ArrayLike, y_array: ArrayLike) -> ArrayLike:
+    def _gradient(
+        self, h_array: ArrayLike, x_array: ArrayLike, y_array: ArrayLike
+    ) -> ArrayLike:
         "grad converts h to the right gradient vector and return the dot product with (x,y)"
         vectors = np.array([[0, 1], [0, -1], [1, 0], [-1, 0]])
         g_array = vectors[h_array % 4]
         return g_array[:, :, 0] * x_array + g_array[:, :, 1] * y_array
-
 
     def noise(self, xy_coords: Tuple[int, int]):
         """
@@ -192,14 +189,14 @@ class NoiseField():
         if x_coord < 0:
             # x negative buffer needs to be increased
             x_to_backfill = self._roundup(abs(x_coord), self.buffer_chunks)
-            self.buffer_field_left(x_to_backfill)
+            self._buffer_field_left(x_to_backfill)
             x_coord, y_coord = xy_coords
             x_coord += self.x_negative_buffer
             y_coord += self.y_negative_buffer
         if y_coord < 0:
             # y negative buffer needs to be increased
             y_to_backfill = self._roundup(abs(y_coord), self.buffer_chunks)
-            self.buffer_field_top(y_to_backfill)
+            self._buffer_field_top(y_to_backfill)
             x_coord, y_coord = xy_coords
             x_coord += self.x_negative_buffer
             y_coord += self.y_negative_buffer
@@ -212,41 +209,60 @@ class NoiseField():
             y_to_extend = y_coord - height + 1
             if x_to_extend > 0:
                 x_to_extend = self._roundup(x_to_extend, self.buffer_chunks)
-                self.buffer_field_right(x_to_extend)
+                self._buffer_field_right(x_to_extend)
             if y_to_extend > 0:
                 y_to_extend = self._roundup(y_to_extend, self.buffer_chunks)
-                self.buffer_field_bottom(y_to_extend)
+                self._buffer_field_bottom(y_to_extend)
             return self.noise(xy_coords)
 
-
-    def recursive_noise(
-            self,
-            xy_coords: Tuple[int, int],
-            depth: int = 1,
-            feedback: float = 0.7,
-        ) -> float:
-        """Returns domain warped recursive perlin noise
-        (number between 0 and 1 from xy coordinates)
-        Recomended feedback (which determines affect of recursive call) around 0-2
+    def noise_range(self, xy: Tuple[int, int], width: int, height: int):
         """
-        # base case
-        if depth <= 0:
-            return self.noise(xy_coords)
-        # else recur with noise of noise
-        noise_from_xy_coords = int(self.noise(xy_coords) * feedback * 100)
-        return self.recursive_noise(
-            (noise_from_xy_coords, noise_from_xy_coords),
-            depth-1,
-            feedback,
-        )
-
+        Hack with copypasta for now (sorry uncle bob)
+        """
+        xy_coords = xy
+        x_coord, y_coord = xy
+        x_coord += width
+        y_coord += height
+        x_coord += self.x_negative_buffer
+        y_coord += self.y_negative_buffer
+        if x_coord < 0:
+            # x negative buffer needs to be increased
+            x_to_backfill = self._roundup(abs(x_coord), self.buffer_chunks)
+            self._buffer_field_left(x_to_backfill)
+            x_coord, y_coord = xy_coords
+            x_coord += self.x_negative_buffer
+            y_coord += self.y_negative_buffer
+        if y_coord < 0:
+            # y negative buffer needs to be increased
+            y_to_backfill = self._roundup(abs(y_coord), self.buffer_chunks)
+            self._buffer_field_top(y_to_backfill)
+            x_coord, y_coord = xy_coords
+            x_coord += self.x_negative_buffer
+            y_coord += self.y_negative_buffer
+        try:
+            _ = self.noise((xy[0] + width, xy[1] + height))
+            return self.field[
+                int(xy[1]) : int(xy[1]) + height, int(xy[0]) : int(xy[0]) + width
+            ]
+        except IndexError:
+            # ran out of generated noise, so need to extend the field
+            height, width = self.field.shape
+            x_to_extend = x_coord - width + 1
+            y_to_extend = y_coord - height + 1
+            if x_to_extend > 0:
+                x_to_extend = self._roundup(x_to_extend, self.buffer_chunks)
+                self._buffer_field_right(x_to_extend)
+            if y_to_extend > 0:
+                y_to_extend = self._roundup(y_to_extend, self.buffer_chunks)
+                self._buffer_field_bottom(y_to_extend)
+            return self.noise_range(xy, width, height)
 
 
 def noise_fields(
-        scale: Union[List[float], float] = 0.002,
-        seed: Union[List[int], int] = None,
-        channels: int = 3,
-    ) -> List[NoiseField]:
+    scale: Union[List[float], float] = 0.002,
+    seed: Union[List[int], int] = None,
+    channels: int = 3,
+) -> List[NoiseField]:
     """
     Create multiple NoiseField objects in one go.
     This is a quality of life function, rather than adding new behaviour

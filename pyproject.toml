@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shades"
+folder = "shades"
+readme = "README.md"
+requires-python = ">=3.9"
+description = "A python module for generative 2D Image creation"
+dynamic = ["version"]
+dependencies = [
+  "numpy>=1.20.0",
+  "Pillow>=8.0.0",
+]
+
+[tool.rye]
+dev-dependencies = [
+  "ipdb>=0.13.13",
+  "hatch>=1.9.1",
+  "keyring>=24.3.0",
+  "pytest>=7.4.4",
+  "mypy>=1.8.0",
+  "black>=23.12.1",
+  "isort>=5.13.2",
+  "twine>=4.0.2",
+  "coverage>=7.4.0",
+  "pdoc>=14.3.0",
+]
+
+[tool.hatch.version]
+path = "shades/__init__.py"

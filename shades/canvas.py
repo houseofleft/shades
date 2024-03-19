@@ -13,6 +13,7 @@ from PIL import Image
 import numpy as np
 
 from shades.noise import NoiseField
+from shades._wrappers import cast_ints
 
 
 class ColorMode(Enum):
@@ -251,6 +252,7 @@ class Canvas:
 
         return rotated_grid
 
+    @cast_ints
     def grid(
         self,
         x_size: int,
@@ -295,6 +297,7 @@ class Canvas:
                 else:
                     yield (j, i)
 
+    @cast_ints
     def rectangle(
         self,
         shade: Callable,
@@ -318,6 +321,7 @@ class Canvas:
         self._stack.append((shade, array))
         return self
 
+    @cast_ints
     def warped_rectangle(
         self,
         shade: Callable,
@@ -347,6 +351,7 @@ class Canvas:
             rotate_on=rotate_on,
         )
 
+    @cast_ints
     def rectangle_outline(
         self,
         shade: Callable,
@@ -397,6 +402,7 @@ class Canvas:
         )
         return self
 
+    @cast_ints
     def warped_rectangle_outline(
         self,
         shade: Callable,
@@ -428,6 +434,7 @@ class Canvas:
             weight=weight,
         )
 
+    @cast_ints
     def square(
         self,
         shade: Callable,
@@ -445,6 +452,7 @@ class Canvas:
         """
         return self.rectangle(shade, corner, width, width, rotation, rotate_on)
 
+    @cast_ints
     def warped_square(
         self,
         shade: Callable,
@@ -473,6 +481,7 @@ class Canvas:
             rotate_on=rotate_on,
         )
 
+    @cast_ints
     def square_outline(
         self,
         shade: Callable,
@@ -497,6 +506,7 @@ class Canvas:
             rotate_on=rotate_on,
         )
 
+    @cast_ints
     def warped_square_outline(
         self,
         shade: Callable,
@@ -525,6 +535,7 @@ class Canvas:
             rotate_on=rotate_on,
         )
 
+    @cast_ints
     def line(
         self,
         shade: Callable,
@@ -546,6 +557,7 @@ class Canvas:
         self._stack.append((shade, array))
         return self
 
+    @cast_ints
     def warped_line(
         self,
         shade: Callable,
@@ -579,6 +591,11 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
+        # casting ints
+        points = [int(i) for i in points]
+        rotation = int(rotation)
+        if rotate_on:
+            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
@@ -612,6 +629,11 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
+        # casting ints
+        points = [int(i) for i in points]
+        rotation = int(rotation)
+        if rotate_on:
+            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
@@ -636,6 +658,12 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
+        # casting ints
+        points = [int(i) for i in points]
+        rotation = int(rotation)
+        if rotate_on:
+            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
+        weight = int(weight)
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
@@ -667,6 +695,12 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
+        # casting ints
+        points = [int(i) for i in points]
+        rotation = int(rotation)
+        if rotate_on:
+            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
+        weight = int(weight)
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
@@ -684,6 +718,7 @@ class Canvas:
             )
         return self
 
+    @cast_ints
     def triangle(
         self,
         shade: Callable,
@@ -702,6 +737,7 @@ class Canvas:
             rotate_on=rotate_on,
         )
 
+    @cast_ints
     def warped_triangle(
         self,
         shade: Callable,
@@ -724,6 +760,7 @@ class Canvas:
             rotate_on=rotate_on,
         )
 
+    @cast_ints
     def triangle_outline(
         self,
         shade: Callable,
@@ -738,6 +775,7 @@ class Canvas:
             shade, point_one, point_two, point_three, rotation=rotation, weight=weight,
         )
 
+    @cast_ints
     def warped_triangle_outline(
         self,
         shade: Callable,
@@ -762,6 +800,7 @@ class Canvas:
             weight=weight,
         )
 
+    @cast_ints
     def circle(
         self,
         shade: Callable,
@@ -788,6 +827,7 @@ class Canvas:
         ]
 
 
+    @cast_ints
     def warped_circle(
         self,
         shade: Callable,
@@ -797,8 +837,9 @@ class Canvas:
         shift: int,
     ) -> "Canvas":
         outline_points = self._circle_edge_points(center, radius)
-        return self.warped_polygon(shade, *outline, warp_noise=warp_noise, shift=shift)
+        return self.warped_polygon(shade, *outline_points, warp_noise=warp_noise, shift=shift)
 
+    @cast_ints
     def circle_outline(
         self,
         shade: Callable,
@@ -812,8 +853,9 @@ class Canvas:
         Draw a circle on canvas with the given shade.
         """
         outline_points = self._circle_edge_points(center, radius)
-        return self.polygon_outline(shade, *outline, weight=weight)
+        return self.polygon_outline(shade, *outline_points, weight=weight)
 
+    @cast_ints
     def warped_circle_outline(
         self,
         shade: Callable,
@@ -824,4 +866,4 @@ class Canvas:
         weight: int = 1,
     ) -> "Canvas":
         outline_points = self._circle_edge_points(center, radius)
-        return self.warped_polygon_outline(shade, *outline, warp_noise=warp_noise, shift=shift, weight=weight)
+        return self.warped_polygon_outline(shade, *outline_points, warp_noise=warp_noise, shift=shift, weight=weight)

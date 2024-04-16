@@ -77,12 +77,12 @@ def custom_shade(
         """
         Custom defined shade
         """
-        colors = np.array()
+        colors = []
         for x in range(xy[0], xy[0] + height):
-            row = np.array()
-            for y in range(xy[1]):
-                np.append(row, custom_function((x, y)))
-            np.append(colors, row)
-        return colors
+            row = []
+            for y in range(xy[1], xy[1] + width):
+                row.append(custom_function((x, y)))
+            colors.append(row)
+        return np.array(colors)
 
     return shade

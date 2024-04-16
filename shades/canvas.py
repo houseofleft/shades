@@ -592,7 +592,7 @@ class Canvas:
         between first points, to second, to third (etc) to first.
         """
         # casting ints
-        points = [int(i) for i in points]
+        points = [(int(i[0]), int(i[1])) for i in points]
         rotation = int(rotation)
         if rotate_on:
             rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
@@ -630,8 +630,9 @@ class Canvas:
         between first points, to second, to third (etc) to first.
         """
         # casting ints
-        points = [int(i) for i in points]
+        points = [(int(i[0]), int(i[1])) for i in points]
         rotation = int(rotation)
+        raise NotImplementedError("this isn't yet actually moving any points")
         if rotate_on:
             rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
         pairs = [
@@ -640,8 +641,9 @@ class Canvas:
         new_points: List[Tuple[int, int]] = []
         for pair in pairs:
             for point in self._points_in_line(*pair):
+                breakpoint()
                 new_points.append(point)
-        return self.polygon(shade, *new_points, warp_noise, shift, rotation, rotate_on)
+        return self.polygon(shade, *new_points, rotation=rotation, rotate_on=rotate_on)
 
 
     def polygon_outline(
@@ -659,7 +661,7 @@ class Canvas:
         between first points, to second, to third (etc) to first.
         """
         # casting ints
-        points = [int(i) for i in points]
+        points = [(int(i[0]), int(i[1])) for i in points]
         rotation = int(rotation)
         if rotate_on:
             rotate_on = (int(rotate_on[0]), int(rotate_on[1]))

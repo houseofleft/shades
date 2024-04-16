@@ -11,7 +11,7 @@ def test_block_color_returns_array_of_identical_colors():
 def test_gradient_produces_expected_shade():
     gradient = shades.gradient()
     actual = gradient((20, 40), 2, 4)
-    assert actual.shape == (4, 2)
+    assert actual.shape == (4, 2, 3)
 
 def test_custom_shade_allows_any_python_function_over_xy_coords():
     custom = shades.custom_shade(lambda xy: (2, 2, 4))

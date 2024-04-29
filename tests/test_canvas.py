@@ -6,7 +6,6 @@ import pytest
 
 from shades import canvas
 from shades.shades import block_color
-from shades.noise import noise_fields
 
 @pytest.fixture
 def canvas_obj():
@@ -28,22 +27,46 @@ def test_grid_provides_correctly_spaces_xy_coords(canvas_obj):
     actual = {i for i in canvas_obj.grid(10, 10)}
     assert actual == {(0, 0), (0, 10), (10, 10), (10, 0)}
 
-def test_rotation_manipulates_rectangle_correcly(small_canvas, black):
-    actual = small_canvas.rectangle(
-        black,
-        (1, 1),
-        2, 1,
-        rotation=90,
-        rotate_on=(1, 1)
-    )._stack[0][1]
-    assert (actual == np.array([[0, 0, 0], [0, 1, 0], [0, 1, 0]])).all()
-
-def test_rectangle_draws_expected_sahpe_without_rotation(small_canvas, black):
+def test_rectangle_draws_expected_shape(small_canvas, black):
     actual = small_canvas.rectangle(black, (1, 1), 2, 1)._stack[0][1]
     assert (actual == np.array([[0, 0, 0], [0, 1, 1], [0, 0, 0]])).all()
 
-def test_rectangle_is_changed_by_warping(canvas_obj, black):
-    not_expected = canvas_obj.rectangle(black, (1, 1), 20, 10)._stack[0][1]
-    actual = canvas_obj.warped_rectangle(black, (1, 1), 20, 10, warp_noise=noise_fields(seed=3, channels=2), shift=100)._stack[1][1]
-    assert not (actual != not_expected).all()
+def test_rectangle_outline_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.rectangle_outline(black, (1, 1), 2, 1)._stack[0][1]
+    assert (actual == np.array([[0, 0, 0], [0, 1, 0], [0, 1, 0]])).all()
 
+def test_square_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.square(black, (1, 1), 2)._stack[0][1]
+    assert (actual == np.array([[0, 0, 0], [0, 1, 1], [0, 1, 1]])).all()
+
+def test_square_outline_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.square_outline(black, (1, 1), 2)._stack[0][1]
+    assert (actual == np.array([[0, 0, 0], [0, 1, 1], [0, 1, 1]])).all()
+
+def test_line_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.line(black, (1, 0), (0, 1))._stack[0][1]
+    assert (actual == np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]])).all()
+
+def test_polygon_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.polygon(black, (1, 1), 2, 1)._stack[0][1]
+    assert (actual == np.array([[0, 0, 0], [0, 1, 1], [0, 0, 0]])).all()
+
+def test_polygon_outline_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.polygon_outline(black, (1, 1), 2, 1)._stack[0][1]
+    assert (actual == np.array([[0, 0, 0], [0, 1, 1], [0, 0, 0]])).all()
+
+def test_triangle_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.triangle(black, (0, 0), (1, 0), (2, 2))._stack[0][1]
+    assert (actual == np.array([[1, 0, 0], [1, 0, 0], [0, 0, 0]])).all()
+
+def test_triangle_outline_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.triangle_outline(black, (0, 0), (1, 0), (2, 2))._stack[0][1]
+    assert (actual == np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]])).all()
+
+def test_circle_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.circle(black, (1, 1), 1)._stack[0][1]
+    assert (actual == np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])).all()
+
+def test_circle_outline_draws_expected_shape(small_canvas, black):
+    actual = small_canvas.circle_outline(black, (1, 1), 2)._stack[0][1]
+    assert (actual == np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])).all()

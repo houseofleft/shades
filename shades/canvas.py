@@ -379,7 +379,7 @@ class Canvas:
         shade: Callable,
         corner: Tuple[int, int],
         width: int,
-        weight: int = 0,
+        weight: int = 1,
     ) -> "Canvas":
         """
         Draw a rectangle outline on the canvas using the given shade.
@@ -422,8 +422,7 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
-        # casting ints
-        points = [(int(i[0]), int(i[1])) for i in points]
+        points = [(int(i[0]), int(i[1])) for i in points]  # casting ints
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
@@ -435,7 +434,7 @@ class Canvas:
         for y in y_to_x_points:
             xs = y_to_x_points[y]
             for start_x, end_x in zip(xs[::2], xs[1::2]):
-                array[y, start_x:end_x] = 1
+                array[y, start_x : end_x + 1] = 1
         self._stack.append((shade, array))
         return self
 
@@ -490,8 +489,12 @@ class Canvas:
         point_three: Tuple[int, int],
         weight: int = 1,
     ) -> "Canvas":
-        return self.polyon_outline(
-            shade, point_one, point_two, point_three, weight=weight,
+        return self.polygon_outline(
+            shade,
+            point_one,
+            point_two,
+            point_three,
+            weight=weight,
         )
 
     @cast_ints
@@ -512,12 +515,13 @@ class Canvas:
         return self
 
     def _circle_edge_points(self, center: Tuple[int, int], radius: int):
-        circumference = radius*2
+        circumference = radius * 2
         return [
             (
-                center[0] + radius * np.cos(2*np.pi*i/circumference),
-                center[1] + radius * np.sin(2*np.pi*i/circumference)
-            ) for i in range(circumference)
+                center[0] + radius * np.cos(2 * np.pi * i / circumference),
+                center[1] + radius * np.sin(2 * np.pi * i / circumference),
+            )
+            for i in range(circumference)
         ]
 
     @cast_ints

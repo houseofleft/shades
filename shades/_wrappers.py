@@ -12,12 +12,12 @@ def cast_ints(func: Callable) -> Callable:
         for kwarg, value in kwargs.items():
             kwarg_type = func.__annotations__.get(kwarg)
             if kwarg_type == int:
-                kwargs[kwarg] = int(value)
+                kwargs[kwarg] = round(value)
             elif kwarg_type == Optional[int] and value is not None:
-                kwargs[kwarg] = int(value)
+                kwargs[kwarg] = round(value)
             elif kwarg_type == Tuple[int, int]:
-                kwargs[kwarg] = (int(value[0]), int(value[1]))
+                kwargs[kwarg] = (round(value[0]), round(value[1]))
             elif kwarg_type == Tuple[int, int, int]:
-                kwargs[kwarg] = (int(value[0]), int(value[1]), int(value[2]))
+                kwargs[kwarg] = (round(value[0]), round(value[1]), round(value[2]))
         return func(**kwargs)
     return casted_func

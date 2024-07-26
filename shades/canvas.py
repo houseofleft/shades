@@ -304,8 +304,6 @@ class Canvas:
         corner: Tuple[int, int],
         width: int,
         height: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a rectangle on the canvas using the given shade.
@@ -315,41 +313,8 @@ class Canvas:
         x, y = corner
         array: np.ndarray = np.zeros((self.height, self.width))
         array[y : y + height, x : x + width] = 1
-        if rotation != 0:
-            rotate_on = rotate_on or corner
-            array = self._rotate(array, rotate_on, rotation)
         self._stack.append((shade, array))
         return self
-
-    @cast_ints
-    def warped_rectangle(
-        self,
-        shade: Callable,
-        corner: Tuple[int, int],
-        width: int,
-        height: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-    ) -> "Canvas":
-        """
-        Draw a rectangle warped by noise fields on the canvas using the given shade.
-
-        Corner point corresponds to top left corner of the rectangle.
-        """
-        x, y = corner
-        return self.warped_polygon(
-            shade,
-            (x, y),
-            (x, y + height),
-            (x + width, y + height),
-            (x + width, y),
-            warp_noise=warp_noise,
-            shift=shift,
-            rotation=rotation,
-            rotate_on=rotate_on,
-        )
 
     @cast_ints
     def rectangle_outline(
@@ -358,9 +323,7 @@ class Canvas:
         corner: Tuple[int, int],
         width: int,
         height: int,
-        rotation: int = 0,
         weight: int = 1,
-        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a rectangle outline on the canvas using the given shade.
@@ -373,66 +336,26 @@ class Canvas:
             corner,
             (x, y + height),
             weight=weight,
-            rotation=rotation,
-            rotate_on=rotate_on,
         )
         self.line(
             shade,
             corner,
             (x + width, y),
             weight=weight,
-            rotation=rotation,
-            rotate_on=rotate_on,
         )
         self.line(
             shade,
             (x, y + height),
             (x + width, y + height),
             weight=weight,
-            rotation=rotation,
-            rotate_on=rotate_on,
         )
         self.line(
             shade,
             (x + width, y),
             (x + width, y + height),
             weight=weight,
-            rotation=rotation,
-            rotate_on=rotate_on,
         )
         return self
-
-    @cast_ints
-    def warped_rectangle_outline(
-        self,
-        shade: Callable,
-        corner: Tuple[int, int],
-        width: int,
-        height: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-        weight: int = 1,
-    ) -> "Canvas":
-        """
-        Draw a rectangle outline, warped by noise fields, on the canvas using the given shade.
-
-        corner point corresponds to top left corner of the rectangle.
-        """
-        x, y = corner
-        return self.warped_polygon_outline(
-            shade,
-            (x, y),
-            (x, y + height),
-            (x + width, y + height),
-            (x + width, y),
-            warp_noise=warp_noise,
-            shift=shift,
-            rotation=rotation,
-            rotate_on=rotate_on,
-            weight=weight,
-        )
 
     @cast_ints
     def square(
@@ -440,8 +363,6 @@ class Canvas:
         shade: Callable,
         corner: Tuple[int, int],
         width: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a square on the canvas using the given shade.
@@ -450,36 +371,7 @@ class Canvas:
 
         Size relates to the height or width (they are the same).
         """
-        return self.rectangle(shade, corner, width, width, rotation, rotate_on)
-
-    @cast_ints
-    def warped_square(
-        self,
-        shade: Callable,
-        corner: Tuple[int, int],
-        width: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-    ) -> "Canvas":
-        """
-        Draw a square, warped by noise on the canvas using the given shade.
-
-        corver point corresponts to the top left corner of the square.
-
-        Size relates to the height or width (they are the same).
-        """
-        return self.warped_rectangle(
-            shade=shade,
-            corner=corner,
-            width=width,
-            height=width,
-            warp_noise=warp_noise,
-            shift=shift,
-            rotation=rotation,
-            rotate_on=rotate_on,
-        )
+        return self.rectangle(shade, corner, width, width)
 
     @cast_ints
     def square_outline(
@@ -487,9 +379,7 @@ class Canvas:
         shade: Callable,
         corner: Tuple[int, int],
         width: int,
-        rotation: int = 0,
-        weight: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
+        weight: int = 1,
     ) -> "Canvas":
         """
         Draw a rectangle outline on the canvas using the given shade.
@@ -501,38 +391,7 @@ class Canvas:
             corner=corner,
             width=width,
             height=width,
-            rotation=rotation,
             weight=weight,
-            rotate_on=rotate_on,
-        )
-
-    @cast_ints
-    def warped_square_outline(
-        self,
-        shade: Callable,
-        corner: Tuple[int, int],
-        width: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        weight: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-    ) -> "Canvas":
-        """
-        Draw a rectangle outline on the canvas using the given shade.
-
-        corner point corresponds to top left corner of the rectangle.
-        """
-        return self.warped_rectangle_outline(
-            shade=shade,
-            corner=corner,
-            width=width,
-            height=width,
-            warp_noise=warp_noise,
-            shift=shift,
-            rotation=rotation,
-            weight=weight,
-            rotate_on=rotate_on,
         )
 
     @cast_ints
@@ -542,8 +401,6 @@ class Canvas:
         start: Tuple[int, int],
         end: Tuple[int, int],
         weight: int = 1,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a line on the canvas using the given shade.
@@ -551,30 +408,6 @@ class Canvas:
         array: np.ndarray = np.zeros((self.height, self.width))
         for x, y in self._points_in_line(start, end):
             array[y : y + weight, x : x + weight] = 1
-        if rotation != 0:
-            rotate_on = rotate_on or start
-            array = self._rotate(array, rotate_on, rotation)
-        self._stack.append((shade, array))
-        return self
-
-    @cast_ints
-    def warped_line(
-        self,
-        shade: Callable,
-        start: Tuple[int, int],
-        end: Tuple[int, int],
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        weight: int = 1,
-    ) -> "Canvas":
-        """
-        Draw a line, warped by noise fields, on the canvas using the
-        given shade.
-        """
-        array: np.ndarray = np.zeros((self.height, self.width))
-        for x, y in self._points_in_line(start, end):
-            array[y, x : x + weight] = 1
-        array = self._shift_array_points(array, warp_noise, shift)
         self._stack.append((shade, array))
         return self
 
@@ -582,8 +415,6 @@ class Canvas:
         self,
         shade: Callable,
         *points: Tuple[int, int],
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         """
         Draw a polygon on canvas with the given shade.
@@ -591,11 +422,7 @@ class Canvas:
         Uses ray tracing to determine points within shape, based on matching
         between first points, to second, to third (etc) to first.
         """
-        # casting ints
-        points = [int(i) for i in points]
-        rotation = int(rotation)
-        if rotate_on:
-            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
+        points = [(int(i[0]), int(i[1])) for i in points]  # casting ints
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
@@ -607,49 +434,14 @@ class Canvas:
         for y in y_to_x_points:
             xs = y_to_x_points[y]
             for start_x, end_x in zip(xs[::2], xs[1::2]):
-                array[y, start_x:end_x] = 1
-        if rotation != 0:
-            rotate_on = rotate_on or points[0]
-            array = self._rotate(array, rotate_on, rotation)
+                array[y, start_x : end_x + 1] = 1
         self._stack.append((shade, array))
         return self
-
-    def warped_polygon(
-        self,
-        shade: Callable,
-        *points: Tuple[int, int],
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-    ) -> "Canvas":
-        """
-        Draw a polygon, warped by noise, on canvas with the given shade.
-
-        Uses ray tracing to determine points within shape, based on matching
-        between first points, to second, to third (etc) to first.
-        """
-        # casting ints
-        points = [int(i) for i in points]
-        rotation = int(rotation)
-        if rotate_on:
-            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
-        pairs = [
-            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
-        ]
-        new_points: List[Tuple[int, int]] = []
-        for pair in pairs:
-            for point in self._points_in_line(*pair):
-                new_points.append(point)
-        return self.polygon(shade, *new_points, warp_noise, shift, rotation, rotate_on)
-
 
     def polygon_outline(
         self,
         shade: Callable,
         *points: Tuple[int, int],
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
         weight: int = 1,
     ) -> "Canvas":
         """
@@ -659,62 +451,17 @@ class Canvas:
         between first points, to second, to third (etc) to first.
         """
         # casting ints
-        points = [int(i) for i in points]
-        rotation = int(rotation)
-        if rotate_on:
-            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
+        points = [(int(i[0]), int(i[1])) for i in points]
         weight = int(weight)
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
         ]
-        rotate_on = rotate_on or points[0]
         for point_one, point_two in pairs:
             self.line(
                 shade,
                 start=point_one,
                 end=point_two,
                 weight=weight,
-                rotation=rotation,
-                rotate_on=rotate_on,
-            )
-        return self
-
-    def warped_polygon_outline(
-        self,
-        shade: Callable,
-        *points: Tuple[int, int],
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-        weight: int = 1,
-    ) -> "Canvas":
-        """
-        Draw a polygon outline, warped by noise, on canvas with the given shade.
-
-        Uses ray tracing to determine points within shape, based on matching
-        between first points, to second, to third (etc) to first.
-        """
-        # casting ints
-        points = [int(i) for i in points]
-        rotation = int(rotation)
-        if rotate_on:
-            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
-        weight = int(weight)
-        pairs = [
-            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
-        ]
-        rotate_on = rotate_on or points[0]
-        for point_one, point_two in pairs:
-            self.warped_line(
-                shade,
-                start=point_one,
-                end=point_two,
-                weight=weight,
-                rotation=rotation,
-                rotate_on=rotate_on,
-                warp_noise=warp_noise,
-                shift=shift,
             )
         return self
 
@@ -725,39 +472,12 @@ class Canvas:
         point_one: Tuple[int, int],
         point_two: Tuple[int, int],
         point_three: Tuple[int, int],
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
     ) -> "Canvas":
         return self.polygon(
             shade,
             point_one,
             point_two,
             point_three,
-            rotation=rotation,
-            rotate_on=rotate_on,
-        )
-
-    @cast_ints
-    def warped_triangle(
-        self,
-        shade: Callable,
-        point_one: Tuple[int, int],
-        point_two: Tuple[int, int],
-        point_three: Tuple[int, int],
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-    ) -> "Canvas":
-        return self.warped_polyon(
-            shade,
-            point_one,
-            point_two,
-            point_three,
-            warp_noise=warp_noise,
-            shift=shift,
-            rotation=rotation,
-            rotate_on=rotate_on,
         )
 
     @cast_ints
@@ -767,36 +487,13 @@ class Canvas:
         point_one: Tuple[int, int],
         point_two: Tuple[int, int],
         point_three: Tuple[int, int],
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
         weight: int = 1,
     ) -> "Canvas":
-        return self.polyon_outline(
-            shade, point_one, point_two, point_three, rotation=rotation, weight=weight,
-        )
-
-    @cast_ints
-    def warped_triangle_outline(
-        self,
-        shade: Callable,
-        point_one: Tuple[int, int],
-        point_two: Tuple[int, int],
-        point_three: Tuple[int, int],
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        rotation: int = 0,
-        rotate_on: Optional[Tuple[int, int]] = None,
-        weight: int = 1,
-    ) -> "Canvas":
-        return self.warped_polyon_outline(
+        return self.polygon_outline(
             shade,
             point_one,
             point_two,
             point_three,
-            warp_noise=warp_noise,
-            shift=shift,
-            rotation=rotation,
-            rotate_on=rotate_on,
             weight=weight,
         )
 
@@ -818,26 +515,14 @@ class Canvas:
         return self
 
     def _circle_edge_points(self, center: Tuple[int, int], radius: int):
-        circumference = radius*2
+        circumference = radius * 2
         return [
             (
-                center[0] + radius * np.cos(2*np.pi*i/circumference),
-                center[1] + radius * np.sin(2*np.pi*i/circumference)
-            ) for i in range(circumference)
+                center[0] + radius * np.cos(2 * np.pi * i / circumference),
+                center[1] + radius * np.sin(2 * np.pi * i / circumference),
+            )
+            for i in range(circumference)
         ]
-
-
-    @cast_ints
-    def warped_circle(
-        self,
-        shade: Callable,
-        center: Tuple[int, int],
-        radius: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-    ) -> "Canvas":
-        outline_points = self._circle_edge_points(center, radius)
-        return self.warped_polygon(shade, *outline_points, warp_noise=warp_noise, shift=shift)
 
     @cast_ints
     def circle_outline(
@@ -845,8 +530,6 @@ class Canvas:
         shade: Callable,
         center: Tuple[int, int],
         radius: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
         weight: int = 1,
     ) -> "Canvas":
         """
@@ -854,16 +537,3 @@ class Canvas:
         """
         outline_points = self._circle_edge_points(center, radius)
         return self.polygon_outline(shade, *outline_points, weight=weight)
-
-    @cast_ints
-    def warped_circle_outline(
-        self,
-        shade: Callable,
-        center: Tuple[int, int],
-        radius: int,
-        warp_noise: Tuple[NoiseField, NoiseField],
-        shift: int,
-        weight: int = 1,
-    ) -> "Canvas":
-        outline_points = self._circle_edge_points(center, radius)
-        return self.warped_polygon_outline(shade, *outline_points, warp_noise=warp_noise, shift=shift, weight=weight)

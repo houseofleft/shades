@@ -1,9 +1,9 @@
 """
 General handy function for drawing
 """
+
 from typing import Tuple, Union
 from random import randint
-
 
 
 def euclidean_distance(point_one: Tuple[int, int], point_two: Tuple[int, int]) -> float:
@@ -13,8 +13,7 @@ def euclidean_distance(point_one: Tuple[int, int], point_two: Tuple[int, int]) -
     between two points.
     """
     return (
-        ((point_one[0] - point_two[0]) ** 2) +
-        ((point_one[1] - point_two[1]) ** 2)
+        ((point_one[0] - point_two[0]) ** 2) + ((point_one[1] - point_two[1]) ** 2)
     ) ** 0.5
 
 

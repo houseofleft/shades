@@ -5,6 +5,7 @@ The Canvas class is responsible for most of the actual "drawing" work in shades.
 I.e. it works out where a circle should go, and stores information on the
 color and shade etc.
 """
+
 from typing import Callable, Tuple, List, Optional, Generator, DefaultDict
 from enum import Enum
 from collections import defaultdict
@@ -14,6 +15,21 @@ import numpy as np
 
 from shades.noise import NoiseField
 from shades._wrappers import cast_ints
+
+
+class GridIteratorCanvas:
+    def __init__(
+        self, canvas, x_size: int, y_size: Optional[int] = None, x_first: bool = True
+    ) -> None:
+        self.canvas = canvas
+        self.x_size = x_size
+        self.y_size = y_size
+        self.x_first = x_first
+
+    def do(self, apply: Callable) -> "Canvas":
+        for x, y in self.canvas.grid(self.x_size, self.y_size, self.x_first):
+            self.canvas = apply(self.canvas, (x, y))
+        return self.canvas
 
 
 class ColorMode(Enum):
@@ -55,89 +71,11 @@ class Canvas:
             color,
             dtype=float,
         )
-        self._stack: List[Tuple[Callable, np.ndarray]] = []
-
-    def _compress_and_render_stack(self) -> None:
-        """
-        Internal method, collapses stack for optimisation and
-        then evaluates into image array.
-
-        (the Canvas class is lazily evaluated, so won't calculate
-        the image array until it needs to)
-        """
-        self._compress_stack()
-        self._render_stack()
-
-    def _compress_stack(self) -> None:
-        """
-        Performs optimisation on the stack to allow more efficient
-        rendering. Will collapse adjacent and matching shades into
-        each other to avoid unecessary draw operations.
-        """
-        if len(self._stack) == 0:
-            return  # nothing to do
-        compressed: List[Tuple[Callable, np.ndarray]] = []
-        last_index = 0
-        for i, item in enumerate(self._stack):
-            if item[0] != self._stack[last_index][0]:
-                compressed.append(
-                    (
-                        self._stack[last_index][0],
-                        np.maximum.reduce(
-                            [i[1] for i in self._stack[last_index : i + 1]]
-                        ),
-                    )
-                )
-                last_index = i
-        compressed.append(
-            (
-                self._stack[last_index][0],
-                np.maximum.reduce([i[1] for i in self._stack[last_index : i + 1]]),
-            )
-        )
-        self._stack = compressed
-
-    def _render_stack(self) -> None:
-        """
-        Evalaute stack of shade and shape-fill arrays before emptying internal
-        _stack variable.
-
-        This is the method that actually does the final work of converting
-        the collected "stack" into a list.
-        """
-        for shade, area in self._stack:
-            nonzero = np.nonzero(area)
-            if len(nonzero[0]) == 0:
-                continue
-            y = np.min(nonzero[0])
-            height = np.max(nonzero[0]) - y
-            x = np.min(nonzero[1])
-            width = np.max(nonzero[1]) - x
-            shaded_area = shade((x, y), width, height)
-            shaded_area = np.clip(shaded_area, 1, 255)
-            shaded_area = np.pad(
-                shaded_area,
-                (
-                    (y, self.height - (height + y)),
-                    (x, self.width - (width + x)),
-                    (0, 0),
-                ),
-                constant_values=0,
-            )
-            shaded_area *= np.repeat(area[:, :, np.newaxis], 3, axis=2)
-            mask = np.any(shaded_area != 0, axis=-1)
-            self._image_array = np.where(
-                mask[:, :, np.newaxis],
-                shaded_area,
-                self._image_array,
-            )
-        self._stack = []
 
     def image(self) -> Image:
         """
         Return PIL image directly
         """
-        self._compress_and_render_stack()
         image = Image.fromarray(
             self._image_array.astype("uint8"),
             mode=self.mode.value,
@@ -160,6 +98,37 @@ class Canvas:
         Any additional keyword arguments will be passed to image writer.
         """
         self.image().save(path, format=format, **kwargs)
+
+    def _add_to_image_array(self, array: np.array, shade: Callable) -> None:
+        """
+        Calculates shades for the array (assumed 0 & 1 only values) and then draws onto
+        the canvas.
+        """
+        non_zeros = np.argwhere(array == 1)
+        try:
+            max_y = non_zeros[:, 0].max()
+            min_y = non_zeros[:, 0].min()
+            max_x = non_zeros[:, 1].max()
+            min_x = non_zeros[:, 1].min()
+        except ValueError:  # we have no image to draw
+            return
+
+        shade_array = shade((min_x, min_y), max_x - min_x, max_y - min_y)
+        shade_array = np.pad(
+            shade_array,
+            pad_width=(
+                (min_y, self.height - max_y),
+                (min_x, self.width - max_x),
+                (0, 0),
+            ),
+            mode="constant",
+            constant_values=0,
+        )
+        shade_array *= np.repeat(array[:, :, np.newaxis], 3, axis=2)
+        mask = np.any(shade_array != 0, axis=-1)
+        self._image_array = np.where(
+            mask[:, :, np.newaxis], shade_array, self._image_array
+        )
 
     def _shift_array_points(
         self, array: np.array, warp_noise: Tuple[NoiseField, NoiseField], shift: int
@@ -253,6 +222,36 @@ class Canvas:
         return rotated_grid
 
     @cast_ints
+    def for_grid(
+        self,
+        x_size: int,
+        y_size: Optional[int] = None,
+        x_first: bool = True,
+    ) -> GridIteratorCanvas:
+        """
+        Returns a 'GridIteratorCanvas' with a 'do' method for looping a given function over a grid.
+
+        Allows method chaining rather if preferred over imperative programming.
+        Also see `grid` method.
+
+        Grid example:
+        ```python
+        for x, y in canvas.grid(10):
+            canvas = canvas.square(red, (x, y), 30)
+        ```
+
+        for_grid equivalent:
+        ```python
+        canvas = (
+            canvas
+            .for_grid(10)
+            .do(lambda canvas, point: canvas.square(red, point, 30))
+        )
+        ```
+        """
+        return GridIteratorCanvas(self, x_size, y_size, x_first)
+
+    @cast_ints
     def grid(
         self,
         x_size: int,
@@ -313,7 +312,10 @@ class Canvas:
         x, y = corner
         array: np.ndarray = np.zeros((self.height, self.width))
         array[y : y + height, x : x + width] = 1
-        self._stack.append((shade, array))
+        if rotation != 0:
+            rotate_on = rotate_on or corner
+            array = self._rotate(array, rotate_on, rotation)
+        self._add_to_image_array(array, shade)
         return self
 
     @cast_ints
@@ -408,7 +410,31 @@ class Canvas:
         array: np.ndarray = np.zeros((self.height, self.width))
         for x, y in self._points_in_line(start, end):
             array[y : y + weight, x : x + weight] = 1
-        self._stack.append((shade, array))
+        if rotation != 0:
+            rotate_on = rotate_on or start
+            array = self._rotate(array, rotate_on, rotation)
+        self._add_to_image_array(array, shade)
+        return self
+
+    @cast_ints
+    def warped_line(
+        self,
+        shade: Callable,
+        start: Tuple[int, int],
+        end: Tuple[int, int],
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        weight: int = 1,
+    ) -> "Canvas":
+        """
+        Draw a line, warped by noise fields, on the canvas using the
+        given shade.
+        """
+        array: np.ndarray = np.zeros((self.height, self.width))
+        for x, y in self._points_in_line(start, end):
+            array[y, x : x + weight] = 1
+        array = self._shift_array_points(array, warp_noise, shift)
+        self._add_to_image_array(array, shade)
         return self
 
     def polygon(
@@ -434,9 +460,41 @@ class Canvas:
         for y in y_to_x_points:
             xs = y_to_x_points[y]
             for start_x, end_x in zip(xs[::2], xs[1::2]):
-                array[y, start_x : end_x + 1] = 1
-        self._stack.append((shade, array))
+                array[y, start_x:end_x] = 1
+        if rotation != 0:
+            rotate_on = rotate_on or points[0]
+            array = self._rotate(array, rotate_on, rotation)
+        self._add_to_image_array(array, shade)
         return self
+
+    def warped_polygon(
+        self,
+        shade: Callable,
+        *points: Tuple[int, int],
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        rotation: int = 0,
+        rotate_on: Optional[Tuple[int, int]] = None,
+    ) -> "Canvas":
+        """
+        Draw a polygon, warped by noise, on canvas with the given shade.
+
+        Uses ray tracing to determine points within shape, based on matching
+        between first points, to second, to third (etc) to first.
+        """
+        # casting ints
+        points = [int(i) for i in points]
+        rotation = int(rotation)
+        if rotate_on:
+            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
+        pairs = [
+            (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
+        ]
+        new_points: List[Tuple[int, int]] = []
+        for pair in pairs:
+            for point in self._points_in_line(*pair):
+                new_points.append(point)
+        return self.polygon(shade, *new_points, warp_noise, shift, rotation, rotate_on)
 
     def polygon_outline(
         self,
@@ -452,6 +510,10 @@ class Canvas:
         """
         # casting ints
         points = [(int(i[0]), int(i[1])) for i in points]
+        rotation = int(rotation)
+        if rotate_on:
+            rotate_on = (int(rotate_on[0]), int(rotate_on[1]))
+
         weight = int(weight)
         pairs = [
             (point, points[(i + 1) % len(points)]) for i, point in enumerate(points)
@@ -487,6 +549,30 @@ class Canvas:
         point_one: Tuple[int, int],
         point_two: Tuple[int, int],
         point_three: Tuple[int, int],
+        rotation: int = 0,
+        rotate_on: Optional[Tuple[int, int]] = None,
+        weight: int = 1,
+    ) -> "Canvas":
+        return self.polyon_outline(
+            shade,
+            point_one,
+            point_two,
+            point_three,
+            rotation=rotation,
+            weight=weight,
+        )
+
+    @cast_ints
+    def warped_triangle_outline(
+        self,
+        shade: Callable,
+        point_one: Tuple[int, int],
+        point_two: Tuple[int, int],
+        point_three: Tuple[int, int],
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        rotation: int = 0,
+        rotate_on: Optional[Tuple[int, int]] = None,
         weight: int = 1,
     ) -> "Canvas":
         return self.polygon_outline(
@@ -511,7 +597,7 @@ class Canvas:
         i, j = np.ogrid[: self.height, : self.width]
         array: np.ndarray = np.zeros((self.height, self.width))
         array[(i - y) ** 2 + (j - x) ** 2 <= radius**2] = 1
-        self._stack.append((shade, array))
+        self._add_to_image_array(array, shade)
         return self
 
     def _circle_edge_points(self, center: Tuple[int, int], radius: int):
@@ -523,6 +609,20 @@ class Canvas:
             )
             for i in range(circumference)
         ]
+
+    @cast_ints
+    def warped_circle(
+        self,
+        shade: Callable,
+        center: Tuple[int, int],
+        radius: int,
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+    ) -> "Canvas":
+        outline_points = self._circle_edge_points(center, radius)
+        return self.warped_polygon(
+            shade, *outline_points, warp_noise=warp_noise, shift=shift
+        )
 
     @cast_ints
     def circle_outline(
@@ -537,3 +637,18 @@ class Canvas:
         """
         outline_points = self._circle_edge_points(center, radius)
         return self.polygon_outline(shade, *outline_points, weight=weight)
+
+    @cast_ints
+    def warped_circle_outline(
+        self,
+        shade: Callable,
+        center: Tuple[int, int],
+        radius: int,
+        warp_noise: Tuple[NoiseField, NoiseField],
+        shift: int,
+        weight: int = 1,
+    ) -> "Canvas":
+        outline_points = self._circle_edge_points(center, radius)
+        return self.warped_polygon_outline(
+            shade, *outline_points, warp_noise=warp_noise, shift=shift, weight=weight
+        )

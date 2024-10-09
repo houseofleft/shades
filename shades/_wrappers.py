@@ -1,9 +1,11 @@
 """
 Function decorators for internal use.
 """
+
 from typing import Callable, Tuple, Optional
 import inspect
 from functools import wraps
+
 
 def cast_ints(func: Callable) -> Callable:
     @wraps(func)
@@ -20,4 +22,5 @@ def cast_ints(func: Callable) -> Callable:
             elif kwarg_type == Tuple[int, int, int]:
                 kwargs[kwarg] = (round(value[0]), round(value[1]), round(value[2]))
         return func(**kwargs)
+
     return casted_func

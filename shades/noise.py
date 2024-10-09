@@ -3,6 +3,7 @@ noise_fields
 
 Functions and classes relating to Shades' NoiseField
 """
+
 import random
 import math
 

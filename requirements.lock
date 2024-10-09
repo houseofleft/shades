@@ -5,7 +5,11 @@
 #   pre: false
 #   features: []
 #   all-features: false
+#   with-sources: false
+#   generate-hashes: false
 
 -e file:.
 numpy==1.26.2
+    # via shades
 pillow==10.1.0
+    # via shades

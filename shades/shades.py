@@ -3,7 +3,9 @@ shades
 
 functions to be used for pixel level color generation with Canvas object
 """
+
 from typing import Tuple, Callable
+from functools import cache
 
 import numpy as np
 
@@ -59,7 +61,7 @@ def gradient(
 
 
 def custom_shade(
-    custom_function: Callable[Tuple[int, int], Tuple[int, int, int]]
+    custom_function: Callable[Tuple[int, int], Tuple[int, int, int]],
 ) -> Callable:
     """
     Convenience function to register a standard (x,y) coord to color function

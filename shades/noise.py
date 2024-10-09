@@ -177,7 +177,7 @@ class NoiseField:
         g_array = vectors[h_array % 4]
         return g_array[:, :, 0] * x_array + g_array[:, :, 1] * y_array
 
-    def noise(self, xy_coords: Tuple[int, int]):
+    def _noise(self, xy_coords: Tuple[int, int]):
         """
         Returns noise of xy coords
         Also manages noise_field (will dynamically recalcuate as needed)
@@ -214,11 +214,12 @@ class NoiseField:
             if y_to_extend > 0:
                 y_to_extend = self._roundup(y_to_extend, self.buffer_chunks)
                 self._buffer_field_bottom(y_to_extend)
-            return self.noise(xy_coords)
+            return self._noise(xy_coords)
 
     def noise_range(self, xy: Tuple[int, int], width: int, height: int):
         """
-        Hack with copypasta for now (sorry uncle bob)
+        Return noise values for a given grid (starting at point xy)
+        and covering the stated width and height
         """
         xy_coords = xy
         x_coord, y_coord = xy
@@ -241,7 +242,7 @@ class NoiseField:
             x_coord += self.x_negative_buffer
             y_coord += self.y_negative_buffer
         try:
-            _ = self.noise((xy[0] + width, xy[1] + height))
+            _ = self._noise((xy[0] + width, xy[1] + height))
             return self.field[
                 int(xy[1]) : int(xy[1]) + height, int(xy[0]) : int(xy[0]) + width
             ]

@@ -132,3 +132,5 @@ wcwidth==0.2.13
     # via prompt-toolkit
 zipp==3.17.0
     # via importlib-metadata
+zstandard==0.22.0
+    # via hatch

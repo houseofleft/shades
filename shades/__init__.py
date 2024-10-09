@@ -10,4 +10,4 @@ from shades.canvas import Canvas  # noqa
 from shades.noise import noise_fields  # noqa
 from shades.shades import block_color, gradient  # noqa
 
-__version__ = "2.0.0a"
+__version__ = "2.0.1a"
